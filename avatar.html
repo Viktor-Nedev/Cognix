@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognix | Avatar Test</title>
+    <meta
+      name="description"
+      content="Test the Cognix avatar and submit a problem to trigger the visible thinking state."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body class="theme-avatar">
+    <div class="transition-overlay" aria-hidden="true">
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+    </div>
+
+    <div class="backdrop" aria-hidden="true">
+      <div class="glow glow-a"></div>
+      <div class="glow glow-b"></div>
+      <div class="glow glow-c"></div>
+      <div class="grid"></div>
+      <div class="noise"></div>
+    </div>
+
+    <main class="site-shell avatar-shell-page">
+      <header class="site-header compact">
+        <a class="brand" href="./index.html" data-transition-link>
+          <span class="brand-mark">C</span>
+          <span class="brand-word">Cogni<span>x</span></span>
+        </a>
+
+        <a class="button button-secondary" href="./index.html" data-transition-link>
+          Back to home
+        </a>
+      </header>
+
+      <section class="avatar-playground">
+        <div class="avatar-intro reveal" data-reveal="fade-up">
+          <p class="eyebrow">Avatar test environment</p>
+          <h1 class="hero-title avatar-page-title">Put the problem in front of Cognix.</h1>
+          <p class="hero-lead narrow">
+            The avatar starts in its normal state, plays the activation clip,
+            then stays in the thinking loop while the system focuses on the dilemma.
+          </p>
+        </div>
+
+        <div class="avatar-stage-center reveal" data-reveal="scale-in" data-phase="idle">
+          <div class="center-ring center-ring-a"></div>
+          <div class="center-ring center-ring-b"></div>
+          <div class="center-ring center-ring-c"></div>
+          <div class="center-orb center-orb-a"></div>
+          <div class="center-orb center-orb-b"></div>
+          <div class="center-orb center-orb-c"></div>
+
+          <div class="avatar-focus">
+            <video
+              id="avatarPlayer"
+              class="avatar-player"
+              autoplay
+              muted
+              loop
+              playsinline
+              src="./avatar/normalstate.mp4"
+            ></video>
+          </div>
+        </div>
+
+        <div class="avatar-status reveal" data-reveal="fade-up">
+          <span class="tile-label">Avatar state</span>
+          <h2 id="avatarStateLabel">Normal standby</h2>
+          <p id="avatarStateText">
+            Cognix is waiting for a problem. When you submit one, it will wake
+            up and shift into the thinking loop.
+          </p>
+        </div>
+
+        <form id="problemForm" class="problem-panel reveal" data-reveal="fade-up">
+          <label class="sr-only" for="problemInput">Describe your problem</label>
+          <textarea
+            id="problemInput"
+            rows="5"
+            placeholder="Describe your problem here. Example: Should I join a startup now or stay in my current job until the end of the year?"
+          ></textarea>
+
+          <div class="problem-actions">
+            <div class="problem-chips" id="problemChips"></div>
+            <button class="button button-primary" type="submit">Start thinking</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

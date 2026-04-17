@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cognix | Visible AI Reasoning</title>
+    <title>Cognix | Visual AI Decisions</title>
     <meta
       name="description"
-      content="Cognix visualizes AI reasoning through an animated avatar and a staged decision flow."
+      content="Cognix makes AI reasoning visible through an animated avatar and cinematic decision flows."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,168 +20,190 @@
     <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
-    <script defer src="./app.js"></script>
+    <script defer src="./home.js"></script>
   </head>
-  <body>
+  <body class="theme-home">
+    <div class="transition-overlay" aria-hidden="true">
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+    </div>
+
     <div class="backdrop" aria-hidden="true">
       <div class="glow glow-a"></div>
       <div class="glow glow-b"></div>
+      <div class="glow glow-c"></div>
       <div class="grid"></div>
+      <div class="noise"></div>
     </div>
 
-    <main class="shell">
-      <header class="header">
-        <a class="brand" href="#top">
+    <main class="site-shell">
+      <header class="site-header reveal" data-reveal="fade-up">
+        <a class="brand" href="./index.html">
           <span class="brand-mark">C</span>
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
-        <div class="pills">
-          <span class="pill"><span class="dot"></span>Visible reasoning</span>
-          <span class="pill">Animated decision copilot</span>
-        </div>
+
+        <nav class="top-nav">
+          <a href="#idea">Idea</a>
+          <a href="#experience">Experience</a>
+          <a href="./avatar.html" data-transition-link>Test avatar</a>
+        </nav>
       </header>
 
-      <section class="hero" id="top">
-        <div class="copy">
-          <p class="eyebrow">Decision intelligence with a face</p>
-          <h1 class="hero-title">See the AI think before it decides.</h1>
-          <p class="lead">
-            Cognix turns a dilemma into a visual sequence: understanding,
-            options, evaluation, and final call. The avatar changes state as the
-            reasoning unfolds.
+      <section class="hero-layout" id="top">
+        <div class="hero-copy">
+          <p class="eyebrow reveal" data-reveal="fade-up">Visible AI reasoning</p>
+          <h1 class="hero-title reveal" data-reveal="title">
+            The decision engine that shows its mind at work.
+          </h1>
+          <p class="hero-lead reveal" data-reveal="fade-up">
+            Cognix is not another answer box. It turns uncertainty into a visual
+            performance where an animated intelligence breaks a dilemma into
+            structured steps you can actually follow.
           </p>
-          <div class="chips">
-            <span>6 avatar states</span>
-            <span>Live reasoning flow</span>
-            <span>Stage-ready demo</span>
+
+          <div class="hero-actions reveal" data-reveal="fade-up">
+            <a class="button button-primary" href="./avatar.html" data-transition-link>
+              Test the avatar
+            </a>
+            <a class="button button-secondary" href="#idea">
+              Explore the concept
+            </a>
+          </div>
+
+          <div class="hero-stats reveal-group">
+            <article class="glass-tile reveal" data-reveal="fade-up">
+              <span class="tile-label">Interface style</span>
+              <strong>Cinematic</strong>
+              <p>Every state is staged with motion, timing, and visual tension.</p>
+            </article>
+            <article class="glass-tile reveal" data-reveal="fade-up">
+              <span class="tile-label">Decision output</span>
+              <strong>Structured</strong>
+              <p>Problem framing, options, tradeoffs, and final recommendation.</p>
+            </article>
+            <article class="glass-tile reveal" data-reveal="fade-up">
+              <span class="tile-label">Hackathon edge</span>
+              <strong>Memorable</strong>
+              <p>It explains the logic and gives the audience something alive to watch.</p>
+            </article>
           </div>
         </div>
 
-        <aside class="stage card" data-phase="idle">
-          <div class="halo halo-a"></div>
-          <div class="halo halo-b"></div>
-          <div class="avatar-shell">
-            <div class="ring ring-a"></div>
-            <div class="ring ring-b"></div>
-            <div class="ring ring-c"></div>
-            <div class="orb orb-a"></div>
-            <div class="orb orb-b"></div>
-            <div class="orb orb-c"></div>
-            <div class="screen">
-              <video id="avatarVideo" class="avatar-video" autoplay muted playsinline></video>
-              <div id="avatarFallback" class="avatar-fallback">
-                <div class="core"></div>
-                <div class="bars"><span></span><span></span><span></span></div>
-                <p>Avatar placeholder. Add state videos in <code>/avatar</code>.</p>
+        <aside class="hero-stage reveal" data-reveal="scale-in">
+          <div class="stage-orbit orbit-a"></div>
+          <div class="stage-orbit orbit-b"></div>
+          <div class="stage-orbit orbit-c"></div>
+
+          <div class="hero-device">
+            <div class="hero-device-ring ring-a"></div>
+            <div class="hero-device-ring ring-b"></div>
+            <div class="hero-device-ring ring-c"></div>
+
+            <div class="hero-screen">
+              <video
+                id="heroAvatar"
+                class="hero-avatar-video"
+                autoplay
+                muted
+                loop
+                playsinline
+                src="./avatar/normalstate.mp4"
+              ></video>
+
+              <div class="hero-avatar-core" aria-hidden="true">
+                <div class="core-shell"></div>
+                <div class="pulse-line pulse-a"></div>
+                <div class="pulse-line pulse-b"></div>
+                <div class="pulse-line pulse-c"></div>
               </div>
             </div>
           </div>
-          <div class="phase-copy">
-            <span class="phase-kicker">Current phase</span>
-            <h2 id="phaseLabel">Idle loop</h2>
-            <p id="phaseDescription">
-              Cognix is waiting for a dilemma and keeping the avatar in the
-              normal loop.
+
+          <div class="hero-stage-copy">
+            <span class="tile-label">Live avatar state</span>
+            <h2>Cognix waits, wakes up, then starts thinking on-screen.</h2>
+            <p>
+              The home page hints at the personality. The test page lets the
+              avatar react directly to the user's problem.
             </p>
           </div>
         </aside>
       </section>
 
-      <section class="controls">
-        <div class="card panel">
-          <p class="eyebrow">Ask Cognix</p>
-          <h3>Drop in a real decision.</h3>
-          <form id="questionForm" class="form">
-            <label class="sr-only" for="questionInput">Decision question</label>
-            <textarea
-              id="questionInput"
-              rows="4"
-              placeholder="Should I accept the startup offer or stay in my stable job for six more months?"
-            ></textarea>
-            <div class="form-row">
-              <div id="demoQuestions" class="demo-questions"></div>
-              <button type="submit" class="button">Run simulation</button>
-            </div>
-          </form>
+      <section class="feature-band reveal" data-reveal="fade-up" id="idea">
+        <div class="section-heading">
+          <p class="eyebrow">Core idea</p>
+          <h2>People do not just need answers. They need a visible path to confidence.</h2>
         </div>
 
-        <div class="card panel">
-          <p class="eyebrow">Decision telemetry</p>
-          <h3>Reasoning signals.</h3>
-          <div class="metrics">
-            <article class="metric">
-              <span>Clarity</span>
-              <strong data-metric-value="clarity">18%</strong>
-              <div class="rail"><span data-metric-fill="clarity"></span></div>
-            </article>
-            <article class="metric">
-              <span>Momentum</span>
-              <strong data-metric-value="momentum">24%</strong>
-              <div class="rail"><span data-metric-fill="momentum"></span></div>
-            </article>
-            <article class="metric">
-              <span>Risk load</span>
-              <strong data-metric-value="risk">12%</strong>
-              <div class="rail"><span data-metric-fill="risk"></span></div>
-            </article>
-            <article class="metric">
-              <span>Confidence</span>
-              <strong data-metric-value="confidence">10%</strong>
-              <div class="rail"><span data-metric-fill="confidence"></span></div>
-            </article>
-          </div>
+        <div class="feature-grid">
+          <article class="feature-card reveal" data-reveal="fade-up">
+            <span class="feature-index">01</span>
+            <h3>Frame the real problem</h3>
+            <p>
+              Cognix starts by identifying what the user is actually trying to
+              decide, not just repeating the prompt back.
+            </p>
+          </article>
+          <article class="feature-card reveal" data-reveal="fade-up">
+            <span class="feature-index">02</span>
+            <h3>Render the reasoning</h3>
+            <p>
+              Options, tradeoffs, and confidence are visualized as a staged
+              flow instead of a wall of text.
+            </p>
+          </article>
+          <article class="feature-card reveal" data-reveal="fade-up">
+            <span class="feature-index">03</span>
+            <h3>Make the AI feel present</h3>
+            <p>
+              The avatar gives the system a living surface so the user can see
+              when it is idle, activating, and actively processing.
+            </p>
+          </article>
         </div>
       </section>
 
-      <section class="card board">
-        <div class="board-top">
-          <div>
-            <p class="eyebrow">Thinking flow</p>
-            <h3>Every phase stays visible.</h3>
-          </div>
-          <div class="system">
-            <span>System line</span>
-            <p id="systemLine">System ready. Waiting for a dilemma.</p>
-          </div>
-        </div>
+      <section class="story-layout" id="experience">
+        <article class="story-card reveal" data-reveal="fade-left">
+          <p class="eyebrow">User flow</p>
+          <h2>From dilemma to decision in one clear motion.</h2>
+          <ol class="story-list">
+            <li>The user writes a problem.</li>
+            <li>Cognix shifts from idle into thinking mode.</li>
+            <li>The system structures the decision into clear parts.</li>
+            <li>The recommendation lands with reasoning, not mystery.</li>
+          </ol>
+        </article>
 
-        <div class="question">
-          <span>Current prompt</span>
-          <p id="questionEcho">
-            Add a question above to watch Cognix structure the decision.
+        <article class="story-card highlight reveal" data-reveal="fade-right">
+          <p class="eyebrow">Why it stands out</p>
+          <h2>It is easier to trust intelligence when you can watch it work.</h2>
+          <p>
+            The combination of staged logic and animated presence is the part
+            that makes the concept sharper. It is not only functional. It is
+            legible and memorable.
+          </p>
+          <a class="inline-link" href="./avatar.html" data-transition-link>
+            Open the avatar test environment
+          </a>
+        </article>
+      </section>
+
+      <section class="cta-panel reveal" data-reveal="scale-in">
+        <div class="cta-copy">
+          <p class="eyebrow">Next step</p>
+          <h2>Open the avatar and give Cognix a real problem.</h2>
+          <p>
+            The test page keeps the avatar at the center, then lets the user
+            trigger the thinking sequence from a single text field.
           </p>
         </div>
-
-        <div class="board-grid">
-          <article id="understandingCard" class="box">
-            <div class="box-head"><span>01</span><h4>Understanding</h4></div>
-            <p id="understandingText">
-              Waiting for input. Cognix will first define what the real decision
-              actually is.
-            </p>
-          </article>
-
-          <div class="box options-box">
-            <div class="box-head"><span>02</span><h4>Options</h4></div>
-            <div id="optionsGrid" class="options-grid"></div>
-          </div>
-
-          <article id="evaluationCard" class="box">
-            <div class="box-head"><span>03</span><h4>Evaluation</h4></div>
-            <p id="evaluationText">
-              Once the options are visible, Cognix compares upside, reversibility,
-              momentum, and risk.
-            </p>
-            <div id="scoreBoard" class="scoreboard"></div>
-          </article>
-
-          <article id="decisionCard" class="box">
-            <div class="box-head"><span>04</span><h4>Final decision</h4></div>
-            <div id="decisionContent" class="decision-content">
-              The final recommendation appears here after the evaluation pass.
-            </div>
-          </article>
-        </div>
+        <a class="button button-primary button-large" href="./avatar.html" data-transition-link>
+          Launch avatar test
+        </a>
       </section>
     </main>
   </body>
