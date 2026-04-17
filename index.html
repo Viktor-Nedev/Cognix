@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognix | Visible AI Reasoning</title>
+    <meta
+      name="description"
+      content="Cognix visualizes AI reasoning through an animated avatar and a staged decision flow."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/ScrollTrigger.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div class="backdrop" aria-hidden="true">
+      <div class="glow glow-a"></div>
+      <div class="glow glow-b"></div>
+      <div class="grid"></div>
+    </div>
+
+    <main class="shell">
+      <header class="header">
+        <a class="brand" href="#top">
+          <span class="brand-mark">C</span>
+          <span class="brand-word">Cogni<span>x</span></span>
+        </a>
+        <div class="pills">
+          <span class="pill"><span class="dot"></span>Visible reasoning</span>
+          <span class="pill">Animated decision copilot</span>
+        </div>
+      </header>
+
+      <section class="hero" id="top">
+        <div class="copy">
+          <p class="eyebrow">Decision intelligence with a face</p>
+          <h1 class="hero-title">See the AI think before it decides.</h1>
+          <p class="lead">
+            Cognix turns a dilemma into a visual sequence: understanding,
+            options, evaluation, and final call. The avatar changes state as the
+            reasoning unfolds.
+          </p>
+          <div class="chips">
+            <span>6 avatar states</span>
+            <span>Live reasoning flow</span>
+            <span>Stage-ready demo</span>
+          </div>
+        </div>
+
+        <aside class="stage card" data-phase="idle">
+          <div class="halo halo-a"></div>
+          <div class="halo halo-b"></div>
+          <div class="avatar-shell">
+            <div class="ring ring-a"></div>
+            <div class="ring ring-b"></div>
+            <div class="ring ring-c"></div>
+            <div class="orb orb-a"></div>
+            <div class="orb orb-b"></div>
+            <div class="orb orb-c"></div>
+            <div class="screen">
+              <video id="avatarVideo" class="avatar-video" autoplay muted playsinline></video>
+              <div id="avatarFallback" class="avatar-fallback">
+                <div class="core"></div>
+                <div class="bars"><span></span><span></span><span></span></div>
+                <p>Avatar placeholder. Add state videos in <code>/avatar</code>.</p>
+              </div>
+            </div>
+          </div>
+          <div class="phase-copy">
+            <span class="phase-kicker">Current phase</span>
+            <h2 id="phaseLabel">Idle loop</h2>
+            <p id="phaseDescription">
+              Cognix is waiting for a dilemma and keeping the avatar in the
+              normal loop.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="controls">
+        <div class="card panel">
+          <p class="eyebrow">Ask Cognix</p>
+          <h3>Drop in a real decision.</h3>
+          <form id="questionForm" class="form">
+            <label class="sr-only" for="questionInput">Decision question</label>
+            <textarea
+              id="questionInput"
+              rows="4"
+              placeholder="Should I accept the startup offer or stay in my stable job for six more months?"
+            ></textarea>
+            <div class="form-row">
+              <div id="demoQuestions" class="demo-questions"></div>
+              <button type="submit" class="button">Run simulation</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card panel">
+          <p class="eyebrow">Decision telemetry</p>
+          <h3>Reasoning signals.</h3>
+          <div class="metrics">
+            <article class="metric">
+              <span>Clarity</span>
+              <strong data-metric-value="clarity">18%</strong>
+              <div class="rail"><span data-metric-fill="clarity"></span></div>
+            </article>
+            <article class="metric">
+              <span>Momentum</span>
+              <strong data-metric-value="momentum">24%</strong>
+              <div class="rail"><span data-metric-fill="momentum"></span></div>
+            </article>
+            <article class="metric">
+              <span>Risk load</span>
+              <strong data-metric-value="risk">12%</strong>
+              <div class="rail"><span data-metric-fill="risk"></span></div>
+            </article>
+            <article class="metric">
+              <span>Confidence</span>
+              <strong data-metric-value="confidence">10%</strong>
+              <div class="rail"><span data-metric-fill="confidence"></span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="card board">
+        <div class="board-top">
+          <div>
+            <p class="eyebrow">Thinking flow</p>
+            <h3>Every phase stays visible.</h3>
+          </div>
+          <div class="system">
+            <span>System line</span>
+            <p id="systemLine">System ready. Waiting for a dilemma.</p>
+          </div>
+        </div>
+
+        <div class="question">
+          <span>Current prompt</span>
+          <p id="questionEcho">
+            Add a question above to watch Cognix structure the decision.
+          </p>
+        </div>
+
+        <div class="board-grid">
+          <article id="understandingCard" class="box">
+            <div class="box-head"><span>01</span><h4>Understanding</h4></div>
+            <p id="understandingText">
+              Waiting for input. Cognix will first define what the real decision
+              actually is.
+            </p>
+          </article>
+
+          <div class="box options-box">
+            <div class="box-head"><span>02</span><h4>Options</h4></div>
+            <div id="optionsGrid" class="options-grid"></div>
+          </div>
+
+          <article id="evaluationCard" class="box">
+            <div class="box-head"><span>03</span><h4>Evaluation</h4></div>
+            <p id="evaluationText">
+              Once the options are visible, Cognix compares upside, reversibility,
+              momentum, and risk.
+            </p>
+            <div id="scoreBoard" class="scoreboard"></div>
+          </article>
+
+          <article id="decisionCard" class="box">
+            <div class="box-head"><span>04</span><h4>Final decision</h4></div>
+            <div id="decisionContent" class="decision-content">
+              The final recommendation appears here after the evaluation pass.
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
