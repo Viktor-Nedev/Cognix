@@ -58,49 +58,187 @@
           </p>
         </div>
 
-        <div class="avatar-stage-center reveal" data-reveal="scale-in" data-phase="idle">
-          <div class="center-ring center-ring-a"></div>
-          <div class="center-ring center-ring-b"></div>
-          <div class="center-ring center-ring-c"></div>
-          <div class="center-orb center-orb-a"></div>
-          <div class="center-orb center-orb-b"></div>
-          <div class="center-orb center-orb-c"></div>
+        <div class="avatar-layout">
+          <div class="avatar-stage-center reveal" data-reveal="scale-in" data-phase="idle">
+            <div class="center-ring center-ring-a"></div>
+            <div class="center-ring center-ring-b"></div>
+            <div class="center-ring center-ring-c"></div>
 
-          <div class="avatar-focus">
-            <video
-              id="avatarPlayer"
-              class="avatar-player"
-              autoplay
-              muted
-              loop
-              playsinline
-              src="./avatar/normalstate.mp4"
-            ></video>
+            <div class="orbital-track orbital-track-a">
+              <div class="center-orb center-orb-a"></div>
+            </div>
+            <div class="orbital-track orbital-track-b">
+              <div class="center-orb center-orb-b"></div>
+            </div>
+            <div class="orbital-track orbital-track-c">
+              <div class="center-orb center-orb-c"></div>
+            </div>
+
+            <div class="avatar-focus">
+              <video
+                id="avatarPlayer"
+                class="avatar-player"
+                autoplay
+                muted
+                loop
+                playsinline
+                src="./avatar/normalstate.mp4"
+              ></video>
+            </div>
+          </div>
+
+          <div class="avatar-side">
+            <div class="mode-console reveal" data-reveal="fade-up">
+              <div class="console-topline">
+                <div class="avatar-status">
+                  <div class="avatar-status-head">
+                    <div class="avatar-status-copy">
+                      <span class="tile-label">Avatar state</span>
+                      <h2 id="avatarStateLabel">Normal standby</h2>
+                    </div>
+
+                    <div class="mode-switcher" aria-label="Interaction mode">
+                      <button type="button" class="mode-toggle is-active" data-mode="problem">
+                        Problem
+                      </button>
+                      <button type="button" class="mode-toggle" data-mode="debate">
+                        Debate
+                      </button>
+                    </div>
+                  </div>
+
+                  <p id="avatarStateText">
+                    Cognix is waiting for a problem. When you submit one, it will wake
+                    up and shift into the thinking loop.
+                  </p>
+                </div>
+              </div>
+
+              <div class="mode-panels">
+                <form id="problemForm" class="problem-panel mode-panel is-active" data-mode-panel="problem">
+                  <label class="sr-only" for="problemInput">Describe your problem</label>
+                  <span class="tile-label">Describe your problem</span>
+                  <textarea
+                    id="problemInput"
+                    rows="5"
+                    placeholder="Describe your problem here. Example: Should I join a startup now or stay in my current job until the end of the year?"
+                  ></textarea>
+
+                  <div class="problem-actions">
+                    <div class="problem-chips" id="problemChips"></div>
+                    <button class="button button-primary" type="submit">Start thinking</button>
+                  </div>
+                </form>
+
+                <section class="debate-console mode-panel" data-mode-panel="debate">
+                  <div class="debate-console-head">
+                    <div>
+                      <span class="tile-label">Debate mode</span>
+                      <h3>Let Cognix moderate the room, compare the arguments, and decide which side is strongest.</h3>
+                    </div>
+                  </div>
+
+                  <div class="debate-step is-active" data-debate-step="context">
+                    <div class="debate-step-card">
+                      <span class="tile-label">Step 1</span>
+                      <h4>What is the actual dispute?</h4>
+                      <p>Describe the core issue first so Cognix knows what the people are arguing about.</p>
+                      <textarea
+                        id="debateContext"
+                        rows="4"
+                        placeholder="Example: Two co-founders disagree whether to launch now or wait for a more polished product."
+                      ></textarea>
+                      <div class="debate-step-actions">
+                        <button type="button" class="button button-primary" id="debateContextNext">
+                          Continue to viewpoints
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="debate-step" data-debate-step="count">
+                    <div class="debate-step-card">
+                      <span class="tile-label">Step 2</span>
+                      <h4>How many viewpoints are entering the room?</h4>
+                      <p>Choose how many different people or sides Cognix should compare.</p>
+                      <div class="count-switch" id="viewpointCount">
+                        <button type="button" class="count-option" data-count="2">2 viewpoints</button>
+                        <button type="button" class="count-option is-active" data-count="3">3 viewpoints</button>
+                        <button type="button" class="count-option" data-count="4">4 viewpoints</button>
+                      </div>
+                      <div class="debate-step-actions">
+                        <button type="button" class="button button-secondary" id="debateCountBack">
+                          Back
+                        </button>
+                        <button type="button" class="button button-primary" id="debateCountNext">
+                          Generate argument slots
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="debate-step" data-debate-step="arguments">
+                    <form id="debateForm" class="debate-panel">
+                      <div class="debate-stack">
+                        <article class="debate-opinion-card" data-opinion-card="0">
+                          <span class="tile-label">Opinion A</span>
+                          <textarea id="debateA" rows="4" placeholder="Person A: Write the first position here."></textarea>
+                        </article>
+                        <article class="debate-opinion-card" data-opinion-card="1">
+                          <span class="tile-label">Opinion B</span>
+                          <textarea id="debateB" rows="4" placeholder="Person B: Write the second position here."></textarea>
+                        </article>
+                        <article class="debate-opinion-card" data-opinion-card="2">
+                          <span class="tile-label">Opinion C</span>
+                          <textarea id="debateC" rows="4" placeholder="Optional: Add a third position if needed."></textarea>
+                        </article>
+                        <article class="debate-opinion-card" data-opinion-card="3">
+                          <span class="tile-label">Opinion D</span>
+                          <textarea id="debateD" rows="4" placeholder="Optional: Add a fourth position if needed."></textarea>
+                        </article>
+                      </div>
+
+                      <div class="debate-actions">
+                        <button type="button" class="button button-secondary" id="debateArgumentsBack">
+                          Back
+                        </button>
+                        <button type="button" class="button button-secondary" id="debateSample">
+                          Load sample debate
+                        </button>
+                        <button type="submit" class="button button-primary">
+                          Judge the debate
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  <article class="debate-verdict-panel is-hidden" id="debateVerdict">
+                    <span class="tile-label">AI verdict</span>
+                    <h3 id="debateWinner">Waiting for the arguments.</h3>
+                    <p id="debateReason">
+                      Add at least two viewpoints and Cognix will compare clarity,
+                      evidence, practicality, and fairness before choosing the strongest case.
+                    </p>
+                    <div class="verdict-bars">
+                      <div class="verdict-bar">
+                        <span>Clarity</span>
+                        <div class="rail"><span id="debateClarity"></span></div>
+                      </div>
+                      <div class="verdict-bar">
+                        <span>Evidence</span>
+                        <div class="rail"><span id="debateEvidence"></span></div>
+                      </div>
+                      <div class="verdict-bar">
+                        <span>Fairness</span>
+                        <div class="rail"><span id="debateFairness"></span></div>
+                      </div>
+                    </div>
+                  </article>
+                </section>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="avatar-status reveal" data-reveal="fade-up">
-          <span class="tile-label">Avatar state</span>
-          <h2 id="avatarStateLabel">Normal standby</h2>
-          <p id="avatarStateText">
-            Cognix is waiting for a problem. When you submit one, it will wake
-            up and shift into the thinking loop.
-          </p>
-        </div>
-
-        <form id="problemForm" class="problem-panel reveal" data-reveal="fade-up">
-          <label class="sr-only" for="problemInput">Describe your problem</label>
-          <textarea
-            id="problemInput"
-            rows="5"
-            placeholder="Describe your problem here. Example: Should I join a startup now or stay in my current job until the end of the year?"
-          ></textarea>
-
-          <div class="problem-actions">
-            <div class="problem-chips" id="problemChips"></div>
-            <button class="button button-primary" type="submit">Start thinking</button>
-          </div>
-        </form>
       </section>
     </main>
   </body>

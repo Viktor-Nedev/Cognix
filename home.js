@@ -253,4 +253,22 @@ function startHomeAmbientMotion() {
     yoyo: true,
     ease: "sine.inOut",
   });
+
+  window.gsap.to(".signal-chip", {
+    y: -8,
+    duration: 2.8,
+    stagger: 0.14,
+    repeat: -1,
+    yoyo: true,
+    ease: "sine.inOut",
+  });
+
+  window.gsap.to(".concept-card, .sequence-node", {
+    y: -6,
+    duration: 2.8,
+    stagger: 0.16,
+    repeat: -1,
+    yoyo: true,
+    ease: "sine.inOut",
+  });
 }
