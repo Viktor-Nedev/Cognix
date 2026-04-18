@@ -17,6 +17,10 @@
   --radius-lg: 28px;
   --radius-md: 22px;
   --shell: min(calc(100% - 2rem), 1240px);
+  --glow-accent: rgba(134, 241, 217, 0.45);
+  --glow-warn: rgba(255, 141, 102, 0.35);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-surface: rgba(4, 13, 17, 0.82);
 }
 
 * {
@@ -980,6 +984,50 @@ body::selection {
   max-width: none;
 }
 
+.console-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.voice-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.voice-switch input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-2);
+}
+
+.voice-hint,
+.decision-subcopy,
+.scorecard-meta,
+.scorecard-reason {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.problem-console {
+  display: grid;
+  gap: 1rem;
+}
+
+.problem-console.mode-panel.is-active {
+  display: grid;
+}
+
 .problem-panel {
   width: 100%;
   padding: 1rem;
@@ -1203,6 +1251,48 @@ body::selection {
   line-height: 1.7;
 }
 
+.debate-scoreboard {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.scorecard-item {
+  padding: 0.9rem 1rem;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scorecard-item.is-winner {
+  border-color: rgba(255, 208, 116, 0.36);
+  box-shadow: 0 16px 40px rgba(255, 208, 116, 0.1);
+}
+
+.scorecard-topline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.scorecard-total {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.scorecard-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .flow-theater {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
@@ -1349,26 +1439,66 @@ body::selection {
   margin-top: 1rem;
 }
 
-.debate-verdict {
+.debate-verdict-panel {
+  padding: 2.2rem;
+  border-radius: 40px;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5);
+  margin-top: 1.5rem;
+}
+
+.debate-verdict-topline {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.debate-verdict-topline h3 {
+  font-size: 2rem;
+  margin: 0.3rem 0;
+  color: var(--accent-2);
 }
 
 .verdict-bars {
   display: grid;
-  gap: 0.9rem;
-  margin-top: 1.2rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.verdict-bar {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .verdict-bar span {
-  display: inline-block;
-  margin-bottom: 0.45rem;
+  display: block;
+  margin-bottom: 0.8rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
+.verdict-bar .rail {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
 .verdict-bar .rail span {
-  transform: scaleX(0.12);
+  display: block;
+  height: 100%;
+  background: var(--accent-2);
+  box-shadow: 0 0 15px var(--accent-2);
+  transform-origin: left center;
+  transform: scaleX(0);
 }
 
 .cta-dock {
@@ -1500,6 +1630,197 @@ body::selection {
   justify-content: space-between;
 }
 
+.decision-panel.is-hidden,
+.voice-dock.is-hidden,
+.debate-verdict-panel.is-hidden {
+  display: none !important;
+}
+
+.voice-dock {
+  padding: 1.2rem;
+  border-radius: 24px;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  margin-top: 1rem;
+}
+
+.decision-panel {
+  padding: 2.2rem;
+  border-radius: 40px;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.decision-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-3), var(--accent-4));
+  opacity: 0.6;
+}
+
+.decision-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1.5rem;
+}
+
+.decision-title-group h3 {
+  font-size: 2.2rem;
+  margin: 0.3rem 0;
+  letter-spacing: -0.05em;
+  background: linear-gradient(
+    to right, 
+    #fff 20%, 
+    var(--accent) 40%, 
+    var(--accent-4) 60%, 
+    #fff 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.decision-summary {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 90%;
+  margin: 1rem 0 2rem;
+}
+
+.decision-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+
+.decision-segment {
+  position: relative;
+  padding-left: 2rem;
+  border-left: 2px solid var(--line);
+}
+
+.decision-segment::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 15px var(--glow-accent);
+}
+
+.decision-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 28px;
+  padding: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.decision-card:hover {
+  transform: translateX(10px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.decision-options {
+  display: flex;
+  gap: 1.2rem;
+  overflow-x: auto;
+  padding: 1rem 0 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.decision-option-card {
+  flex: 0 0 320px;
+  padding: 1.8rem;
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  transition: all 0.4s ease;
+}
+
+.decision-option-card:hover {
+  border-color: var(--accent);
+  background: rgba(134, 241, 217, 0.05);
+  transform: translateY(-8px);
+}
+
+.decision-option-card h4 {
+  font-size: 1.4rem;
+  margin-bottom: 0.8rem;
+  color: #fff;
+}
+
+.decision-option-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.decision-card-strong {
+  background: linear-gradient(135deg, rgba(134, 241, 217, 0.1), rgba(0,0,0,0));
+  border: 1px solid rgba(134, 241, 217, 0.2);
+}
+
+.decision-card-strong h4 {
+  font-size: 1.8rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.decision-next-step {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.5rem;
+  background: rgba(134, 241, 217, 0.1);
+  border-radius: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.decision-speak[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.voice-dock {
+  margin-top: 1rem;
+}
+
+.voice-player {
+  width: 100%;
+  margin-top: 0.55rem;
+}
+
 .problem-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1610,12 +1931,24 @@ body::selection {
     width: 100%;
   }
 
+  .avatar-status-head,
+  .decision-head,
+  .debate-verdict-topline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .avatar-stage-center {
     width: min(100%, 24rem);
   }
 
   .avatar-focus {
     width: min(72vw, 18rem);
+  }
+
+  .decision-grid,
+  .decision-options {
+    grid-template-columns: 1fr;
   }
 
   .debate-actions {

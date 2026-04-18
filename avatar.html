@@ -111,24 +111,98 @@
                     Cognix is waiting for a problem. When you submit one, it will wake
                     up and shift into the thinking loop.
                   </p>
+
+                  <div class="console-status-actions">
+                    <label class="voice-switch" for="voiceEnabled">
+                      <input type="checkbox" id="voiceEnabled" />
+                      <span>Avatar voice</span>
+                    </label>
+                    <p class="voice-hint" id="voiceHint">
+                      Enable ElevenLabs voice playback for Cognix responses.
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div class="mode-panels">
-                <form id="problemForm" class="problem-panel mode-panel is-active" data-mode-panel="problem">
-                  <label class="sr-only" for="problemInput">Describe your problem</label>
-                  <span class="tile-label">Describe your problem</span>
-                  <textarea
-                    id="problemInput"
-                    rows="5"
-                    placeholder="Describe your problem here. Example: Should I join a startup now or stay in my current job until the end of the year?"
-                  ></textarea>
+                <section class="problem-console mode-panel is-active" data-mode-panel="problem">
+                  <form id="problemForm" class="problem-panel">
+                    <label class="sr-only" for="problemInput">Describe your problem</label>
+                    <span class="tile-label">Describe your problem</span>
+                    <textarea
+                      id="problemInput"
+                      rows="5"
+                      placeholder="Describe your problem here. Example: Should I join a startup now or stay in my current job until the end of the year?"
+                    ></textarea>
 
-                  <div class="problem-actions">
-                    <div class="problem-chips" id="problemChips"></div>
-                    <button class="button button-primary" type="submit">Start thinking</button>
-                  </div>
-                </form>
+                    <div class="problem-actions">
+                      <div class="problem-chips" id="problemChips"></div>
+                      <button class="button button-primary" type="submit" id="problemSubmitButton">
+                        Start thinking
+                      </button>
+                    </div>
+                  </form>
+
+                  <article class="decision-panel is-hidden" id="problemResult">
+                    <div class="decision-head">
+                      <div class="decision-title-group">
+                        <span class="tile-label">AI reasoning</span>
+                        <h3 id="decisionTitle">Waiting for a problem.</h3>
+                      </div>
+                      <button
+                        type="button"
+                        class="button button-secondary decision-speak"
+                        id="speakDecision"
+                        disabled
+                      >
+                        Speak answer
+                      </button>
+                    </div>
+
+                    <p class="decision-summary" id="decisionSummary">
+                      Submit a dilemma and Cognix will break it into an understanding layer, three options, an evaluation stage, and a final recommendation.
+                    </p>
+
+                    <div class="decision-grid">
+                      <div class="decision-segment">
+                        <section class="decision-card">
+                          <span class="tile-label">Understanding</span>
+                          <p id="problemUnderstanding">
+                            The decision context will appear here once the AI response arrives.
+                          </p>
+                        </section>
+                      </div>
+
+                      <div class="decision-segment">
+                        <section class="decision-card">
+                          <span class="tile-label">Options</span>
+                          <div class="decision-options" id="problemOptions"></div>
+                        </section>
+                      </div>
+
+                      <div class="decision-segment">
+                        <section class="decision-card">
+                          <span class="tile-label">Evaluation</span>
+                          <p class="decision-subcopy" id="problemKeyTension">
+                            Cognix will surface the core tension behind the decision here.
+                          </p>
+                          <ul class="decision-list" id="problemEvaluation"></ul>
+                        </section>
+                      </div>
+
+                      <div class="decision-segment">
+                        <section class="decision-card decision-card-strong">
+                          <span class="tile-label">Final decision</span>
+                          <h4 id="problemDecision">No recommendation yet.</h4>
+                          <p id="problemDecisionWhy">
+                            The final call will appear here with a practical explanation.
+                          </p>
+                          <p class="decision-next-step" id="problemNextStep"></p>
+                        </section>
+                      </div>
+                    </div>
+                  </article>
+                </section>
 
                 <section class="debate-console mode-panel" data-mode-panel="debate">
                   <div class="debate-console-head">
@@ -213,12 +287,26 @@
                   </div>
 
                   <article class="debate-verdict-panel is-hidden" id="debateVerdict">
-                    <span class="tile-label">AI verdict</span>
-                    <h3 id="debateWinner">Waiting for the arguments.</h3>
+                    <div class="debate-verdict-topline">
+                      <div>
+                        <span class="tile-label">AI verdict</span>
+                        <h3 id="debateWinner">Waiting for the arguments.</h3>
+                      </div>
+                      <button
+                        type="button"
+                        class="button button-secondary decision-speak"
+                        id="speakVerdict"
+                        disabled
+                      >
+                        Speak verdict
+                      </button>
+                    </div>
+
                     <p id="debateReason">
                       Add at least two viewpoints and Cognix will compare clarity,
                       evidence, practicality, and fairness before choosing the strongest case.
                     </p>
+                    <p class="decision-subcopy" id="debateModeratorSummary"></p>
                     <div class="verdict-bars">
                       <div class="verdict-bar">
                         <span>Clarity</span>
@@ -233,8 +321,14 @@
                         <div class="rail"><span id="debateFairness"></span></div>
                       </div>
                     </div>
+                    <div class="debate-scoreboard" id="debateScoreboard"></div>
                   </article>
                 </section>
+              </div>
+
+              <div class="voice-dock is-hidden" id="voiceDock">
+                <span class="tile-label">Voice playback</span>
+                <audio id="voicePlayer" class="voice-player" controls preload="none"></audio>
               </div>
             </div>
           </div>

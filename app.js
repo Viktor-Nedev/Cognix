@@ -37,6 +37,10 @@ const runtime = {
   videoToken: 0,
   activeMode: "problem",
   debateStep: "context",
+  voiceEnabled: false,
+  activeAudioUrl: "",
+  lastProblemSpeech: "",
+  lastDebateSpeech: "",
 };
 
 document.addEventListener("DOMContentLoaded", initAvatarPage);
@@ -45,6 +49,7 @@ function initAvatarPage() {
   registerAvatarPlugins();
   setupPageTransitionLinks();
   setupModeConsole();
+  setupVoiceConsole();
   buildProblemChips();
   bindProblemForm();
   setupDebateLab();
@@ -60,11 +65,7 @@ function registerAvatarPlugins() {
     return;
   }
 
-  const plugins = [
-    window.SplitText,
-    window.ScrambleTextPlugin,
-    window.CustomEase,
-  ].filter(Boolean);
+  const plugins = [window.SplitText, window.ScrambleTextPlugin, window.CustomEase].filter(Boolean);
 
   if (plugins.length) {
     window.gsap.registerPlugin(...plugins);
@@ -115,6 +116,93 @@ function setupPageTransitionLinks() {
   });
 }
 
+function setupModeConsole() {
+  document.querySelectorAll(".mode-toggle").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextMode = button.dataset.mode || "problem";
+      if (nextMode === runtime.activeMode) {
+        return;
+      }
+      setActiveMode(nextMode);
+    });
+  });
+}
+
+function setupVoiceConsole() {
+  const checkbox = document.getElementById("voiceEnabled");
+  const speakDecision = document.getElementById("speakDecision");
+  const speakVerdict = document.getElementById("speakVerdict");
+
+  if (checkbox) {
+    checkbox.addEventListener("change", () => {
+      runtime.voiceEnabled = checkbox.checked;
+      updateVoiceHint(
+        checkbox.checked
+          ? "Avatar voice is enabled. Cognix will speak after each AI response."
+          : "Enable ElevenLabs voice playback for Cognix responses.",
+      );
+    });
+  }
+
+  if (speakDecision) {
+    speakDecision.addEventListener("click", () => {
+      if (runtime.lastProblemSpeech) {
+        playSpeech(runtime.lastProblemSpeech);
+      }
+    });
+  }
+
+  if (speakVerdict) {
+    speakVerdict.addEventListener("click", () => {
+      if (runtime.lastDebateSpeech) {
+        playSpeech(runtime.lastDebateSpeech);
+      }
+    });
+  }
+}
+
+function setActiveMode(mode) {
+  runtime.activeMode = mode;
+  playAvatarPhase("idle");
+  const stage = document.querySelector(".avatar-stage-center");
+  if (stage) {
+    stage.dataset.phase = "idle";
+  }
+
+  document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.modePanel === mode);
+  });
+
+  document.querySelectorAll(".mode-toggle").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mode === mode);
+  });
+
+  if (mode === "debate") {
+    resetDebateFlow();
+    updateAvatarStatus(
+      "Debate intake",
+      "Start by describing the dispute. After that, Cognix will ask how many viewpoints should enter the room.",
+    );
+  } else {
+    setAvatarState("idle");
+  }
+
+  if (!window.gsap || runtime.reduced) {
+    return;
+  }
+
+  const activePanel = document.querySelector(".mode-panel.is-active");
+  if (!activePanel) {
+    return;
+  }
+
+  window.gsap.fromTo(
+    activePanel,
+    { autoAlpha: 0, y: 18 },
+    { autoAlpha: 1, y: 0, duration: 0.55, ease: "cognixEase" },
+  );
+}
+
 function buildProblemChips() {
   const container = document.getElementById("problemChips");
   const input = document.getElementById("problemInput");
@@ -134,9 +222,10 @@ function buildProblemChips() {
 
   container.querySelectorAll("[data-problem]").forEach((button) => {
     button.addEventListener("click", () => {
-      input.value = button.dataset.problem || "";
+      const problem = button.dataset.problem || "";
+      input.value = problem;
       input.focus();
-      startThinkingSequence();
+      submitProblem(problem);
     });
   });
 }
@@ -153,87 +242,219 @@ function bindProblemForm() {
     return;
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    await submitProblem(input.value);
+  });
+}
 
-    if (!input.value.trim()) {
+async function submitProblem(rawProblem) {
+  const input = document.getElementById("problemInput");
+  const problem = String(rawProblem || "").trim();
+
+  if (!problem) {
+    if (input) {
       shakeInput(input);
       input.focus();
-      return;
     }
-
-    startThinkingSequence();
-  });
-}
-
-function setupModeConsole() {
-  document.querySelectorAll(".mode-toggle").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextMode = button.dataset.mode || "problem";
-      if (nextMode === runtime.activeMode) {
-        return;
-      }
-      setActiveMode(nextMode);
-    });
-  });
-}
-
-function setActiveMode(mode) {
-  runtime.activeMode = mode;
-  playAvatarPhase("idle");
-  const stage = document.querySelector(".avatar-stage-center");
-  if (stage) {
-    stage.dataset.phase = "idle";
-  }
-
-  document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.modePanel === mode);
-  });
-
-  document.querySelectorAll(".mode-toggle").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.mode === mode);
-  });
-
-  const stateLabel = document.getElementById("avatarStateLabel");
-
-  if (mode === "debate") {
-    resetDebateFlow();
-    updateDebateState(
-      "Debate intake",
-      "Start by describing the dispute. After that, Cognix will ask how many viewpoints should enter the room.",
-    );
-  } else {
-    setAvatarState("idle");
-  }
-
-  if (!window.gsap || runtime.reduced) {
     return;
   }
 
-  window.gsap.fromTo(
-    ".mode-panel.is-active",
-    { autoAlpha: 0, y: 18 },
-    { autoAlpha: 1, y: 0, duration: 0.55, ease: "cognixEase" },
-  );
-}
+  const submitButton = document.getElementById("problemSubmitButton");
+  setButtonLoading(submitButton, true, "Analyzing...");
+  showProblemLoading(problem);
+  startThinkingSequence();
 
-function startThinkingSequence() {
-  playAvatarPhase("intro");
-  setAvatarState("intro");
-
-  const currentToken = runtime.videoToken;
-  const video = document.getElementById("avatarPlayer");
-  if (!video) {
-    return;
-  }
-
-  video.onended = () => {
-    if (currentToken !== runtime.videoToken) {
-      return;
-    }
+  try {
+    const result = await postJson("/api/problem", { problem });
+    renderProblemResult(result);
     playAvatarPhase("thinking");
-    setAvatarState("thinking");
-  };
+    updateAvatarStatus(
+      "Decision ready",
+      "Cognix has mapped the dilemma, compared the paths, and is now presenting the recommendation.",
+    );
+    await maybeSpeak(result.spokenResponse, "problem");
+  } catch (error) {
+    renderProblemError(error.message || "Cognix could not reach the AI service.");
+    playAvatarPhase("thinking");
+    updateAvatarStatus(
+      "Connection issue",
+      "Cognix could not complete the decision analysis. Check the server and API credentials, then try again.",
+    );
+  } finally {
+    setButtonLoading(submitButton, false, "Start thinking");
+  }
+}
+
+function showProblemLoading(problem) {
+  runtime.lastProblemSpeech = "";
+  setSpeakButtonState("speakDecision", false);
+  const panel = document.getElementById("problemResult");
+  const title = document.getElementById("decisionTitle");
+  const summary = document.getElementById("decisionSummary");
+  const understanding = document.getElementById("problemUnderstanding");
+  const options = document.getElementById("problemOptions");
+  const keyTension = document.getElementById("problemKeyTension");
+  const evaluation = document.getElementById("problemEvaluation");
+  const decision = document.getElementById("problemDecision");
+  const decisionWhy = document.getElementById("problemDecisionWhy");
+  const nextStep = document.getElementById("problemNextStep");
+
+  panel?.classList.remove("is-hidden");
+  if (title) {
+    title.textContent = "Reading the dilemma...";
+  }
+  if (summary) {
+    summary.textContent = "Cognix is unpacking the situation and shaping the reasoning flow for: “" + problem + "”";
+  }
+  if (understanding) {
+    understanding.textContent = "The understanding layer is being generated.";
+  }
+  if (options) {
+    options.innerHTML = '<p class="decision-subcopy">Three options will appear here as soon as the AI response arrives.</p>';
+  }
+  if (keyTension) {
+    keyTension.textContent = "The core tension is being identified.";
+  }
+  if (evaluation) {
+    evaluation.innerHTML = "<li>Tradeoff mapping is in progress.</li>";
+  }
+  if (decision) {
+    decision.textContent = "No recommendation yet.";
+  }
+  if (decisionWhy) {
+    decisionWhy.textContent = "Cognix is still comparing the paths.";
+  }
+  if (nextStep) {
+    nextStep.textContent = "";
+  }
+
+  animatePanelReveal(panel);
+}
+
+function renderProblemResult(result) {
+  const title = document.getElementById("decisionTitle");
+  const summary = document.getElementById("decisionSummary");
+  const understanding = document.getElementById("problemUnderstanding");
+  const options = document.getElementById("problemOptions");
+  const keyTension = document.getElementById("problemKeyTension");
+  const evaluation = document.getElementById("problemEvaluation");
+  const decision = document.getElementById("problemDecision");
+  const decisionWhy = document.getElementById("problemDecisionWhy");
+  const nextStep = document.getElementById("problemNextStep");
+
+  runtime.lastProblemSpeech = result.spokenResponse || "";
+  setSpeakButtonState("speakDecision", Boolean(runtime.lastProblemSpeech));
+
+  if (title) {
+    if (window.gsap && window.ScrambleTextPlugin) {
+      window.gsap.to(title, {
+        scrambleText: { text: result.title || "Decision flow ready.", chars: "lowerCase", speed: 0.5 },
+        duration: 0.8
+      });
+    } else {
+      title.textContent = result.title || "Decision flow ready.";
+    }
+  }
+
+  if (summary) summary.textContent = result.summary || "";
+  if (understanding) understanding.textContent = result.understanding || "";
+  if (options) options.innerHTML = renderDecisionOptions(result.options || []);
+  if (keyTension) keyTension.textContent = result.evaluation?.keyTension || "";
+  if (evaluation) {
+    evaluation.innerHTML = (result.evaluation?.tradeoffs || [])
+      .map((item) => "<li>" + escapeHtml(item) + "</li>")
+      .join("");
+  }
+  if (decision) decision.textContent = result.decision?.recommendedOption || "";
+  if (decisionWhy) decisionWhy.textContent = result.decision?.rationale || "";
+  if (nextStep) nextStep.textContent = result.decision?.nextStep ? "Next step: " + result.decision.nextStep : "";
+
+  animateProblemResult();
+}
+
+function renderProblemError(message) {
+  const panel = document.getElementById("problemResult");
+  const title = document.getElementById("decisionTitle");
+  const summary = document.getElementById("decisionSummary");
+  const understanding = document.getElementById("problemUnderstanding");
+  const options = document.getElementById("problemOptions");
+  const keyTension = document.getElementById("problemKeyTension");
+  const evaluation = document.getElementById("problemEvaluation");
+  const decision = document.getElementById("problemDecision");
+  const decisionWhy = document.getElementById("problemDecisionWhy");
+  const nextStep = document.getElementById("problemNextStep");
+
+  panel?.classList.remove("is-hidden");
+  runtime.lastProblemSpeech = "";
+  setSpeakButtonState("speakDecision", false);
+
+  if (title) {
+    title.textContent = "AI analysis unavailable.";
+  }
+  if (summary) {
+    summary.textContent = message;
+  }
+  if (understanding) {
+    understanding.textContent = "Check that the local server is running and the Gemini key is valid.";
+  }
+  if (options) {
+    options.innerHTML = '<p class="decision-subcopy">No options could be generated because the AI request failed.</p>';
+  }
+  if (keyTension) {
+    keyTension.textContent = "The reasoning pipeline stopped before evaluation.";
+  }
+  if (evaluation) {
+    evaluation.innerHTML =
+      "<li>Confirm the `.env` keys are present.</li><li>Restart the Node server after changing env values.</li>";
+  }
+  if (decision) {
+    decision.textContent = "No decision available.";
+  }
+  if (decisionWhy) {
+    decisionWhy.textContent = "The request did not complete successfully.";
+  }
+  if (nextStep) {
+    nextStep.textContent = "";
+  }
+
+  animatePanelReveal(panel);
+}
+
+function renderDecisionOptions(options) {
+  if (!options.length) {
+    return '<p class="decision-subcopy">No options were returned by the AI.</p>';
+  }
+
+  return options
+    .map((option, index) => {
+      const pros = (option.pros || []).map((item) => "<li>" + escapeHtml(item) + "</li>").join("");
+      const cons = (option.cons || []).map((item) => "<li>" + escapeHtml(item) + "</li>").join("");
+
+      return (
+        '<article class="decision-option-card">' +
+        '<span class="tile-label">Option ' +
+        String.fromCharCode(65 + index) +
+        "</span>" +
+        "<h4>" +
+        escapeHtml(option.title || "Untitled option") +
+        "</h4>" +
+        "<p>" +
+        escapeHtml(option.summary || "") +
+        "</p>" +
+        "<ul>" +
+        pros +
+        cons +
+        "</ul>" +
+        '<div class="decision-option-meta"><span>Risk: ' +
+        escapeHtml(option.risk || "") +
+        "</span><span>Confidence: " +
+        escapeHtml(String(option.confidence ?? "")) +
+        "%</span></div>" +
+        "</article>"
+      );
+    })
+    .join("");
 }
 
 function setupDebateLab() {
@@ -255,7 +476,10 @@ function setupDebateLab() {
   if (countBack) {
     countBack.addEventListener("click", () => {
       showDebateStep("context");
-      updateDebateState("Debate intake", "Cognix is listening to what the disagreement is actually about before opening the room to viewpoints.");
+      updateAvatarStatus(
+        "Debate intake",
+        "Cognix is listening to what the disagreement is actually about before opening the room to viewpoints.",
+      );
     });
   }
 
@@ -264,7 +488,10 @@ function setupDebateLab() {
       syncViewpointCards();
       hideVerdictPanel();
       showDebateStep("arguments");
-      updateDebateState("Viewpoints loaded", "The room is open. Add each perspective and Cognix will compare them one by one.");
+      updateAvatarStatus(
+        "Viewpoints loaded",
+        "The room is open. Add each perspective and Cognix will compare them one by one.",
+      );
       animateOpinionCards();
     });
   }
@@ -273,7 +500,10 @@ function setupDebateLab() {
     argumentsBack.addEventListener("click", () => {
       showDebateStep("count");
       hideVerdictPanel();
-      updateDebateState("Perspective setup", "Choose how many viewpoints should enter the debate before the arguments appear.");
+      updateAvatarStatus(
+        "Perspective setup",
+        "Choose how many viewpoints should enter the debate before the arguments appear.",
+      );
     });
   }
 
@@ -287,10 +517,9 @@ function setupDebateLab() {
     return;
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    startThinkingSequence();
-    judgeDebate();
+    await judgeDebate();
   });
 }
 
@@ -304,7 +533,8 @@ function syncViewpointCards() {
 function fillDebateSample() {
   const context = document.getElementById("debateContext");
   if (context) {
-    context.value = "A product team is split on whether to launch immediately, delay for polish, or ship to a smaller private group first.";
+    context.value =
+      "A product team is split on whether to launch immediately, delay for polish, or ship to a smaller private group first.";
   }
 
   setSelectedViewpointCount("4");
@@ -320,47 +550,94 @@ function fillDebateSample() {
   });
 
   animateOpinionCards();
-  updateDebateState("Viewpoints loaded", "Sample arguments are in place. Cognix is ready to judge the room.");
-  judgeDebate();
+  updateAvatarStatus("Viewpoints loaded", "Sample arguments are in place. Cognix is ready to judge the room.");
 }
 
-function judgeDebate() {
+async function judgeDebate() {
+  const dispute = String(document.getElementById("debateContext")?.value || "").trim();
   const count = getSelectedViewpointCount();
   const rawOpinions = [
-    buildOpinion("A", document.getElementById("debateA")?.value || ""),
-    buildOpinion("B", document.getElementById("debateB")?.value || ""),
-    buildOpinion("C", document.getElementById("debateC")?.value || ""),
-    buildOpinion("D", document.getElementById("debateD")?.value || ""),
+    buildOpinion("A", "Opinion A", document.getElementById("debateA")?.value || ""),
+    buildOpinion("B", "Opinion B", document.getElementById("debateB")?.value || ""),
+    buildOpinion("C", "Opinion C", document.getElementById("debateC")?.value || ""),
+    buildOpinion("D", "Opinion D", document.getElementById("debateD")?.value || ""),
   ];
   const opinions = rawOpinions.slice(0, count).filter((item) => item.text);
+  const submitButton = document.querySelector('#debateForm button[type="submit"]');
+
+  if (!dispute) {
+    const input = document.getElementById("debateContext");
+    shakeInput(input);
+    input?.focus();
+    showDebateStep("context");
+    return;
+  }
 
   if (opinions.length < 2) {
     updateVerdict(
       "Waiting for stronger debate input.",
       "Add at least two viewpoints so Cognix can compare clarity, evidence, practicality, and fairness before choosing the strongest case.",
       { clarity: 14, evidence: 12, fairness: 10 },
+      "",
+      [],
+      "",
     );
     return;
   }
 
-  const scored = opinions
-    .map((opinion) => ({
-      ...opinion,
-      score: scoreOpinion(opinion.text),
-    }))
-    .sort((left, right) => right.score.total - left.score.total);
+  setButtonLoading(submitButton, true, "Judging...");
+  hideVerdictPanel();
+  startThinkingSequence();
 
-  const winner = scored[0];
-  const runnerUp = scored[1];
-  const reason =
-    "Opinion " +
-    winner.id +
-    " wins because it combines stronger clarity, clearer justification, and a more usable next move than opinion " +
-    runnerUp.id +
-    ". Cognix reads it as the most balanced and defensible position in the room.";
+  try {
+    const result = await postJson("/api/debate", { dispute, opinions });
+    renderDebateResult(result);
+    playAvatarPhase("thinking");
+    updateAvatarStatus(
+      "Debate verdict",
+      "Cognix has compared the room, weighed the strongest case, and is now explaining why that side wins.",
+    );
+    await maybeSpeak(result.spokenResponse, "debate");
+  } catch (error) {
+    renderDebateError(error.message || "Cognix could not judge the debate.");
+    playAvatarPhase("thinking");
+    updateAvatarStatus(
+      "Connection issue",
+      "Cognix could not complete the debate judgment. Check the server and API credentials, then try again.",
+    );
+  } finally {
+    setButtonLoading(submitButton, false, "Judge the debate");
+  }
+}
 
-  updateVerdict("Opinion " + winner.id + " wins this debate.", reason, winner.score);
-  updateDebateState("Debate verdict", "Cognix has compared the arguments and is now explaining which side is strongest and why.");
+function renderDebateResult(result) {
+  const scorecards = Array.isArray(result.scorecards) ? result.scorecards : [];
+  const winnerCard = scorecards.find((item) => item.id === result.winnerId) || scorecards[0];
+
+  runtime.lastDebateSpeech = result.spokenResponse || "";
+  setSpeakButtonState("speakVerdict", Boolean(runtime.lastDebateSpeech));
+
+  updateVerdict(
+    result.verdictTitle || "Debate verdict ready.",
+    result.reasoning || "Cognix has chosen the strongest case.",
+    winnerCard || { clarity: 0, evidence: 0, fairness: 0 },
+    result.moderatorSummary || "",
+    scorecards,
+    result.winnerId || "",
+  );
+}
+
+function renderDebateError(message) {
+  runtime.lastDebateSpeech = "";
+  setSpeakButtonState("speakVerdict", false);
+  updateVerdict(
+    "Debate verdict unavailable.",
+    message,
+    { clarity: 10, evidence: 10, fairness: 10 },
+    "Check that the local server is running and the Gemini key is valid.",
+    [],
+    "",
+  );
 }
 
 function goToDebateCountStep() {
@@ -372,10 +649,15 @@ function goToDebateCountStep() {
   }
 
   showDebateStep("count");
-  updateDebateState("Perspective setup", "Now choose how many different viewpoints should enter the debate before the argument cards appear.");
+  updateAvatarStatus(
+    "Perspective setup",
+    "Now choose how many different viewpoints should enter the debate before the argument cards appear.",
+  );
 }
 
 function resetDebateFlow() {
+  runtime.lastDebateSpeech = "";
+  setSpeakButtonState("speakVerdict", false);
   setSelectedViewpointCount("3");
   showDebateStep("context", false);
   hideVerdictPanel();
@@ -439,7 +721,130 @@ function animateOpinionCards() {
   );
 }
 
-function updateDebateState(label, text) {
+function updateVerdict(title, reason, scores, moderatorSummary, scorecards, winnerId) {
+  const winner = document.getElementById("debateWinner");
+  const explanation = document.getElementById("debateReason");
+  const summary = document.getElementById("debateModeratorSummary");
+  const clarity = document.getElementById("debateClarity");
+  const evidence = document.getElementById("debateEvidence");
+  const fairness = document.getElementById("debateFairness");
+  const scoreboard = document.getElementById("debateScoreboard");
+  const panel = document.getElementById("debateVerdict");
+
+  if (winner) {
+    if (window.gsap && window.ScrambleTextPlugin) {
+      window.gsap.to(winner, {
+        scrambleText: { text: title, chars: "7890", speed: 0.4 },
+        duration: 0.8
+      });
+    } else {
+      winner.textContent = title;
+    }
+  }
+
+  if (explanation) {
+    if (!window.gsap || !window.ScrambleTextPlugin || runtime.reduced) {
+      explanation.textContent = reason;
+    } else {
+      window.gsap.fromTo(explanation, 
+        { autoAlpha: 0, y: 10 },
+        { autoAlpha: 1, y: 0, duration: 1, delay: 0.2, ease: "power2.out" }
+      );
+      explanation.textContent = reason;
+    }
+  }
+
+  if (summary) {
+    summary.textContent = moderatorSummary || "";
+  }
+
+  if (panel) {
+    panel.classList.remove("is-hidden");
+    const tl = window.gsap.timeline();
+
+    tl.fromTo(panel,
+      { autoAlpha: 0, y: 50, scale: 0.98 },
+      { autoAlpha: 1, y: 0, scale: 1, duration: 1, ease: "expo.out" }
+    );
+
+    tl.to([clarity, evidence, fairness], {
+      scaleX: (i, target) => {
+        const val = i === 0 ? scores.clarity : i === 1 ? scores.evidence : scores.fairness;
+        return (val || 0) / 100;
+      },
+      duration: 1.5,
+      stagger: 0.15,
+      ease: "power4.out"
+    }, "-=0.5");
+
+    if (scoreboard) {
+      scoreboard.innerHTML = renderScorecards(scorecards, winnerId);
+      tl.fromTo(scoreboard.children,
+        { autoAlpha: 0, x: 20 },
+        { autoAlpha: 1, x: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" },
+        "-=0.8"
+      );
+    }
+    
+    tl.add(() => {
+      window.scrollTo({ top: panel.offsetTop - 50, behavior: 'smooth' });
+    }, "-=1");
+  }
+}
+
+function renderScorecards(scorecards, winnerId) {
+  if (!Array.isArray(scorecards) || !scorecards.length) {
+    return "";
+  }
+
+  return scorecards
+    .map((card) => {
+      const winnerClass = card.id === winnerId ? " is-winner" : "";
+      return (
+        '<article class="scorecard-item' +
+        winnerClass +
+        '">' +
+        '<div class="scorecard-topline">' +
+        "<h4>" +
+        escapeHtml(card.label || card.id || "Opinion") +
+        "</h4>" +
+        '<span class="scorecard-total">Total ' +
+        escapeHtml(String(card.total ?? 0)) +
+        "</span></div>" +
+        '<p class="scorecard-reason">' +
+        escapeHtml(card.keyStrength || "") +
+        "</p>" +
+        '<div class="scorecard-metrics">' +
+        "<span>Clarity " +
+        escapeHtml(String(card.clarity ?? 0)) +
+        "</span>" +
+        "<span>Evidence " +
+        escapeHtml(String(card.evidence ?? 0)) +
+        "</span>" +
+        "<span>Fairness " +
+        escapeHtml(String(card.fairness ?? 0)) +
+        "</span>" +
+        "<span>Practicality " +
+        escapeHtml(String(card.practicality ?? 0)) +
+        "</span></div>" +
+        '<p class="scorecard-meta">Weakness: ' +
+        escapeHtml(card.keyWeakness || "") +
+        "</p>" +
+        "</article>"
+      );
+    })
+    .join("");
+}
+
+
+function hideVerdictPanel() {
+  const panel = document.getElementById("debateVerdict");
+  if (panel) {
+    panel.classList.add("is-hidden");
+  }
+}
+
+function updateAvatarStatus(label, text) {
   const stateLabel = document.getElementById("avatarStateLabel");
   const stateText = document.getElementById("avatarStateText");
 
@@ -466,103 +871,7 @@ function updateDebateState(label, text) {
   }
 }
 
-function buildOpinion(id, text) {
-  return { id, text: text.trim() };
-}
-
-function scoreOpinion(text) {
-  const normalized = text.toLowerCase();
-  const clarity = Math.min(92, 28 + Math.round(text.length / 2.5));
-  const evidenceBoost = ["because", "data", "users", "result", "evidence", "signal", "metrics"].some((word) =>
-    normalized.includes(word),
-  )
-    ? 24
-    : 9;
-  const fairnessBoost = ["but", "however", "risk", "tradeoff", "without", "while", "balance"].some((word) =>
-    normalized.includes(word),
-  )
-    ? 18
-    : 7;
-  const evidence = Math.min(94, 23 + evidenceBoost + Math.round(text.split(" ").length * 0.9));
-  const fairness = Math.min(90, 21 + fairnessBoost + Math.round(text.length / 7));
-  const total = Math.round(clarity * 0.34 + evidence * 0.36 + fairness * 0.3);
-
-  return { clarity, evidence, fairness, total };
-}
-
-function updateVerdict(title, reason, scores) {
-  const winner = document.getElementById("debateWinner");
-  const explanation = document.getElementById("debateReason");
-  const clarity = document.getElementById("debateClarity");
-  const evidence = document.getElementById("debateEvidence");
-  const fairness = document.getElementById("debateFairness");
-  const panel = document.getElementById("debateVerdict");
-
-  if (winner) {
-    winner.textContent = title;
-  }
-
-  if (explanation) {
-    if (!window.gsap || !window.ScrambleTextPlugin || runtime.reduced) {
-      explanation.textContent = reason;
-    } else {
-      window.gsap.to(explanation, {
-        duration: 1,
-        scrambleText: {
-          text: reason,
-          chars: "lowerCase",
-          revealDelay: 0.12,
-          speed: 0.45,
-        },
-        ease: "none",
-      });
-    }
-  }
-
-  animateVerdictBar(clarity, scores.clarity);
-  animateVerdictBar(evidence, scores.evidence);
-  animateVerdictBar(fairness, scores.fairness);
-
-  if (panel) {
-    panel.classList.remove("is-hidden");
-    if (window.gsap && !runtime.reduced) {
-      window.gsap.fromTo(
-        panel,
-        { autoAlpha: 0, y: 24, scale: 0.98 },
-        { autoAlpha: 1, y: 0, scale: 1, duration: 0.65, ease: "cognixEase" },
-      );
-    }
-  }
-}
-
-function animateVerdictBar(node, value) {
-  if (!node) {
-    return;
-  }
-
-  if (!window.gsap || runtime.reduced) {
-    node.style.transform = "scaleX(" + value / 100 + ")";
-    return;
-  }
-
-  window.gsap.to(node, {
-    scaleX: value / 100,
-    duration: 0.8,
-    ease: "cognixEase",
-    transformOrigin: "left center",
-  });
-}
-
-function hideVerdictPanel() {
-  const panel = document.getElementById("debateVerdict");
-  if (panel) {
-    panel.classList.add("is-hidden");
-  }
-}
-
 function setAvatarState(state) {
-  const label = document.getElementById("avatarStateLabel");
-  const text = document.getElementById("avatarStateText");
   const stage = document.querySelector(".avatar-stage-center");
   const copy = AVATAR_COPY[state] || AVATAR_COPY.idle;
 
@@ -570,26 +879,26 @@ function setAvatarState(state) {
     stage.dataset.phase = state;
   }
 
-  if (label) {
-    label.textContent = copy.label;
+  updateAvatarStatus(copy.label, copy.text);
+}
+
+function startThinkingSequence() {
+  playAvatarPhase("intro");
+  setAvatarState("intro");
+
+  const currentToken = runtime.videoToken;
+  const video = document.getElementById("avatarPlayer");
+  if (!video) {
+    return;
   }
 
-  if (text) {
-    if (!window.gsap || !window.ScrambleTextPlugin || runtime.reduced) {
-      text.textContent = copy.text;
-    } else {
-      window.gsap.to(text, {
-        duration: 0.95,
-        scrambleText: {
-          text: copy.text,
-          chars: "lowerCase",
-          revealDelay: 0.12,
-          speed: 0.45,
-        },
-        ease: "none",
-      });
+  video.onended = () => {
+    if (currentToken !== runtime.videoToken) {
+      return;
     }
-  }
+    playAvatarPhase("thinking");
+    setAvatarState("thinking");
+  };
 }
 
 function playAvatarPhase(phase) {
@@ -620,6 +929,104 @@ function playAvatarPhase(phase) {
   video.addEventListener("canplay", playVideo, { once: true });
 }
 
+async function maybeSpeak(text, mode) {
+  if (mode === "problem") {
+    runtime.lastProblemSpeech = text || runtime.lastProblemSpeech;
+  }
+  if (mode === "debate") {
+    runtime.lastDebateSpeech = text || runtime.lastDebateSpeech;
+  }
+
+  if (!runtime.voiceEnabled || !text) {
+    return;
+  }
+
+  await playSpeech(text);
+}
+
+async function playSpeech(text) {
+  const voiceDock = document.getElementById("voiceDock");
+  const voicePlayer = document.getElementById("voicePlayer");
+
+  if (!voicePlayer || !text) {
+    return;
+  }
+
+  updateVoiceHint("Generating voice playback...");
+
+  try {
+    const response = await fetch("/api/speak", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: "Voice request failed." }));
+      console.warn("ElevenLabs failed, falling back to browser speech:", payload.error);
+      return fallbackToBrowserSpeech(text);
+    }
+
+    const blob = await response.blob();
+    if (runtime.activeAudioUrl) {
+      URL.revokeObjectURL(runtime.activeAudioUrl);
+    }
+
+    runtime.activeAudioUrl = URL.createObjectURL(blob);
+    voicePlayer.src = runtime.activeAudioUrl;
+    voiceDock?.classList.remove("is-hidden");
+    await voicePlayer.play().catch(() => {
+      return;
+    });
+    updateVoiceHint("Voice playback is ready (ElevenLabs).");
+  } catch (error) {
+    console.warn("Speech error, trying browser fallback:", error);
+    fallbackToBrowserSpeech(text);
+  }
+}
+
+function fallbackToBrowserSpeech(text) {
+  if (!window.speechSynthesis) {
+    updateVoiceHint("Speech synthesis not supported in this browser.");
+    return;
+  }
+
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  
+  // Try to find a nice English voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find(v => v.name.includes("Google") && v.lang.startsWith("en")) || 
+                          voices.find(v => v.lang.startsWith("en"));
+  
+  if (preferredVoice) utterance.voice = preferredVoice;
+  utterance.rate = 0.95;
+  utterance.pitch = 1.1;
+
+  utterance.onstart = () => {
+    updateVoiceHint("Voice playback active (Browser Fallback).");
+    const voiceDock = document.getElementById("voiceDock");
+    voiceDock?.classList.remove("is-hidden");
+  };
+
+  utterance.onerror = (e) => {
+    updateVoiceHint("Browser speech failed: " + e.error);
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function updateVoiceHint(text) {
+  const hint = document.getElementById("voiceHint");
+  if (hint) {
+    hint.textContent = text;
+  }
+}
+
 function animateAvatarPage() {
   if (!window.gsap || runtime.reduced) {
     return;
@@ -646,6 +1053,55 @@ function animateAvatarPage() {
     ease: "cognixEase",
     delay: 0.25,
   });
+}
+
+function animatePanelReveal(node) {
+  if (!node || !window.gsap || runtime.reduced) {
+    return;
+  }
+
+  window.gsap.fromTo(
+    node,
+    { autoAlpha: 0, y: 24, scale: 0.985 },
+    { autoAlpha: 1, y: 0, scale: 1, duration: 0.6, ease: "cognixEase" },
+  );
+}
+
+function animateProblemResult() {
+  if (!window.gsap || runtime.reduced) {
+    return;
+  }
+
+  const segments = document.querySelectorAll(".decision-segment");
+  const panel = document.getElementById("problemResult");
+
+  if (!panel || !segments.length) return;
+
+  const tl = window.gsap.timeline({
+    onComplete: () => {
+      window.scrollTo({
+        top: panel.offsetTop + panel.offsetHeight - window.innerHeight + 100,
+        behavior: 'smooth'
+      });
+    }
+  });
+
+  tl.fromTo(panel, 
+    { autoAlpha: 0, y: 100, scale: 0.95 },
+    { autoAlpha: 1, y: 0, scale: 1, duration: 1.2, ease: "expo.out" }
+  );
+
+  tl.fromTo(segments,
+    { autoAlpha: 0, x: -30, filter: "blur(10px)" },
+    { autoAlpha: 1, x: 0, filter: "blur(0px)", duration: 0.8, stagger: 0.25, ease: "power2.out" },
+    "-=0.6"
+  );
+
+  tl.fromTo(".decision-option-card",
+    { autoAlpha: 0, y: 40, rotateX: -15 },
+    { autoAlpha: 1, y: 0, rotateX: 0, duration: 0.8, stagger: 0.15, ease: "back.out(1.4)" },
+    "-=0.4"
+  );
 }
 
 function startAvatarAmbientMotion() {
@@ -722,7 +1178,7 @@ function startAvatarAmbientMotion() {
 }
 
 function shakeInput(node) {
-  if (!window.gsap || runtime.reduced) {
+  if (!node || !window.gsap || runtime.reduced) {
     return;
   }
 
@@ -735,6 +1191,49 @@ function shakeInput(node) {
       keyframes: [{ x: 6 }, { x: -5 }, { x: 4 }, { x: 0 }],
     },
   );
+}
+
+function setButtonLoading(button, isLoading, label) {
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.defaultLabel) {
+    button.dataset.defaultLabel = button.textContent.trim();
+  }
+
+  button.disabled = isLoading;
+  button.textContent = isLoading ? label : button.dataset.defaultLabel;
+}
+
+function setSpeakButtonState(id, enabled) {
+  const button = document.getElementById(id);
+  if (!button) {
+    return;
+  }
+  button.disabled = !enabled;
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({ error: "Request failed." }));
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data;
+}
+
+function buildOpinion(id, label, text) {
+  return { id, label, text: String(text || "").trim() };
 }
 
 function escapeHtml(value) {
