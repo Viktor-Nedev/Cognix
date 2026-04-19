@@ -183,9 +183,13 @@ app.get("*", (request, response, next) => {
   response.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(port, () => {
-  console.log("Cognix server running on http://localhost:" + port);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(port, () => {
+    console.log("Cognix server running on http://localhost:" + port);
+  });
+}
+
+export default app;
 
 async function generateGeminiJson({ schema, prompt }) {
   const geminiResponse = await fetch(
