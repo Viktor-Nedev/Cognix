@@ -11,7 +11,7 @@ const AVATAR_COPY = {
   },
   intro: {
     label: "Activation",
-    text: "The avatar has received the dilemma and is entering the first thinking sequence.",
+    text: "The Cognix has received the dilemma and is entering the first thinking sequence.",
   },
   thinking: {
     label: "Thinking loop",
@@ -37,7 +37,7 @@ const runtime = {
   videoToken: 0,
   activeMode: "problem",
   debateStep: "context",
-  voiceEnabled: false,
+  voiceEnabled: localStorage.getItem("cognix_voice") !== "false",
   activeAudioUrl: "",
   lastProblemSpeech: "",
   lastDebateSpeech: "",
@@ -146,7 +146,7 @@ function setupVoiceConsole() {
       runtime.voiceEnabled = checkbox.checked;
       updateVoiceHint(
         checkbox.checked
-          ? "Avatar voice is enabled. Cognix will speak after each AI response."
+          ? "Cognix voice is enabled. Cognix will speak after each AI response."
           : "Enable ElevenLabs voice playback for Cognix responses.",
       );
     });
@@ -187,7 +187,7 @@ function setActiveMode(mode) {
 
   if (mode === "debate") {
     resetDebateFlow();
-    updateAvatarStatus(
+    updateCognixStatus(
       "Debate intake",
       "Start by describing the dispute. After that, Cognix will ask how many viewpoints should enter the room.",
     );
@@ -268,6 +268,20 @@ async function submitProblem(rawProblem) {
     return;
   }
 
+  if (window.CognixAuth && !window.CognixAuth.currentUser) {
+    alert("Please sign up or log in first to use Cognix AI.");
+    window.location.href = "./auth.html";
+    return;
+  }
+
+  if (window.CognixAuth && window.CognixAuth.currentUser) {
+    const allowed = await window.CognixAuth.useCase(window.CognixAuth.currentUser.uid);
+    if (!allowed) {
+      alert("You have reached your daily limit of 10 cases! Please check your profile for the reset timer.");
+      return;
+    }
+  }
+
   const submitButton = document.getElementById("problemSubmitButton");
   setButtonLoading(submitButton, true, "Analyzing...");
   showProblemLoading(problem);
@@ -277,7 +291,7 @@ async function submitProblem(rawProblem) {
     const result = await postJson("/api/problem", { problem });
     renderProblemResult(result);
     playAvatarPhase("thinking");
-    updateAvatarStatus(
+    updateCognixStatus(
       "Decision ready",
       "Cognix has mapped the dilemma, compared the paths, and is now presenting the recommendation.",
     );
@@ -285,7 +299,7 @@ async function submitProblem(rawProblem) {
   } catch (error) {
     renderProblemError(error.message || "Cognix could not reach the AI service.");
     playAvatarPhase("thinking");
-    updateAvatarStatus(
+    updateCognixStatus(
       "Connection issue",
       "Cognix could not complete the decision analysis. Check the server and API credentials, then try again.",
     );
@@ -484,7 +498,7 @@ function setupDebateLab() {
   if (countBack) {
     countBack.addEventListener("click", () => {
       showDebateStep("context");
-      updateAvatarStatus(
+      updateCognixStatus(
         "Debate intake",
         "Cognix is listening to what the disagreement is actually about before opening the room to viewpoints.",
       );
@@ -496,7 +510,7 @@ function setupDebateLab() {
       syncViewpointCards();
       hideVerdictPanel();
       showDebateStep("arguments");
-      updateAvatarStatus(
+      updateCognixStatus(
         "Viewpoints loaded",
         "The room is open. Add each perspective and Cognix will compare them one by one.",
       );
@@ -508,7 +522,7 @@ function setupDebateLab() {
     argumentsBack.addEventListener("click", () => {
       showDebateStep("count");
       hideVerdictPanel();
-      updateAvatarStatus(
+      updateCognixStatus(
         "Perspective setup",
         "Choose how many viewpoints should enter the debate before the arguments appear.",
       );
@@ -562,7 +576,56 @@ function setupSocialDebate() {
   }
   
   if (btnExit) {
-    btnExit.addEventListener("click", exitSocialRoom);
+    btnExit.addEventListener("click", () => {
+       document.getElementById("socialInviteDropdown")?.classList.add("is-hidden");
+       exitSocialRoom();
+    });
+  }
+
+  const btnInvite = document.getElementById("socialInviteBtn");
+  if (btnInvite) {
+      btnInvite.addEventListener("click", async () => {
+          const dropdown = document.getElementById("socialInviteDropdown");
+          const list = document.getElementById("socialInviteList");
+          if (!dropdown.classList.contains("is-hidden")) {
+               dropdown.classList.add("is-hidden");
+               return;
+          }
+          
+          dropdown.classList.remove("is-hidden");
+          list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>Loading network...</p>";
+          
+          if (!window.CognixAuth) return;
+          const friends = await window.CognixAuth.getFriends();
+          
+          if (friends.length === 0) {
+              list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>No friends added yet.</p>";
+              return;
+          }
+          
+          list.innerHTML = "";
+          friends.forEach(f => {
+               const wrap = document.createElement("div");
+               wrap.className = "invite-list-item";
+               
+               const name = document.createElement("span");
+               name.className = "friend-name";
+               name.textContent = f.username;
+               
+               const invBtn = document.createElement("button");
+               invBtn.className = "mini-invite-btn";
+               invBtn.textContent = "Invite";
+               invBtn.onclick = async () => {
+                   invBtn.textContent = "Sent!";
+                   invBtn.disabled = true;
+                   await window.CognixAuth.sendInvite(f.uid, runtime.social.room);
+               };
+               
+               wrap.appendChild(name);
+               wrap.appendChild(invBtn);
+               list.appendChild(wrap);
+          });
+      });
   }
 
   // Bind typing events to sync arguments
@@ -576,6 +639,69 @@ function setupSocialDebate() {
         });
     }
   });
+
+  // Global Invite Listener
+  document.addEventListener('cognix_receive_invite', (e) => {
+      const invite = e.detail;
+      if (runtime.social.room === invite.roomId) {
+         // I am already in this room
+         window.CognixAuth.clearInvite(invite);
+         return;
+      }
+      
+      const banner = document.createElement("div");
+      banner.style.position = "fixed";
+      banner.style.bottom = "20px";
+      banner.style.right = "20px";
+      banner.style.background = "var(--surface)";
+      banner.style.border = "1px solid var(--accent)";
+      banner.style.padding = "1rem";
+      banner.style.borderRadius = "12px";
+      banner.style.zIndex = "9999";
+      banner.style.boxShadow = "0 10px 40px rgba(0,0,0,0.5)";
+      
+      banner.innerHTML = `
+          <h4 style="margin: 0 0 0.5rem; color: var(--accent);">Social Debate Invite</h4>
+          <p style="margin: 0 0 1rem; font-size: 0.9rem;"><strong>${invite.from}</strong> invited you to join their decision room!</p>
+          <div style="display: flex; gap: 0.5rem;">
+              <button id="accInv" style="background: var(--accent); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: bold;">Join Room</button>
+              <button id="decInv" style="background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">Decline</button>
+          </div>
+      `;
+      
+      document.body.appendChild(banner);
+      if (window.gsap) {
+          window.gsap.from(banner, {y: 50, autoAlpha: 0, duration: 0.5, ease: "back.out(1.7)"});
+      }
+      
+      banner.querySelector("#accInv").onclick = async () => {
+          banner.remove();
+          await window.CognixAuth.clearInvite(invite);
+          if (window.location.pathname.indexOf("cognix.html") === -1) {
+              // Store invite to join after redirect
+              localStorage.setItem("cognix_pending_room", invite.roomId);
+              window.location.href = "./cognix.html";
+          } else {
+              switchMode("debate");
+              joinSocialRoom(invite.roomId);
+          }
+      };
+      
+      banner.querySelector("#decInv").onclick = async () => {
+          banner.remove();
+          await window.CognixAuth.clearInvite(invite);
+      };
+  });
+
+  // Handle pending joins after redirect
+  const pendingRoom = localStorage.getItem("cognix_pending_room");
+  if (pendingRoom) {
+      localStorage.removeItem("cognix_pending_room");
+      setTimeout(() => {
+          switchMode("debate");
+          joinSocialRoom(pendingRoom);
+      }, 500);
+  }
 }
 
 function enterSocialRoom(roomId) {
@@ -591,7 +717,7 @@ function enterSocialRoom(roomId) {
   if (runtime.social.unsubscribe) runtime.social.unsubscribe();
   runtime.social.unsubscribe = window.CognixSocial.joinDebateRoom(roomId, handleSocialSync);
   
-  updateAvatarStatus("Social Room Active", "You are now in a live shared debate. Invite friends using ID: " + roomId);
+  updateCognixStatus("Social Room Active", "You are now in a live shared debate. Invite friends using ID: " + roomId);
 }
 
 function joinSocialRoom(roomId) {
@@ -603,7 +729,7 @@ function exitSocialRoom() {
     runtime.social.unsubscribe = null;
     runtime.social.room = null;
     document.getElementById("socialStatusBar").classList.add("is-hidden");
-    updateAvatarStatus("Social mode ended", "You have left the shared room.");
+    updateCognixStatus("Social mode ended", "You have left the shared room.");
 }
 
 function handleSocialSync(data) {
@@ -654,7 +780,7 @@ function fillDebateSample() {
   });
 
   animateOpinionCards();
-  updateAvatarStatus("Viewpoints loaded", "Sample arguments are in place. Cognix is ready to judge the room.");
+  updateCognixStatus("Viewpoints loaded", "Sample arguments are in place. Cognix is ready to judge the room.");
 }
 
 async function judgeDebate() {
@@ -689,6 +815,20 @@ async function judgeDebate() {
     return;
   }
 
+  if (window.CognixAuth && !window.CognixAuth.currentUser) {
+    alert("Please sign up or log in first to use Cognix AI.");
+    window.location.href = "./auth.html";
+    return;
+  }
+
+  if (window.CognixAuth && window.CognixAuth.currentUser) {
+    const allowed = await window.CognixAuth.useCase(window.CognixAuth.currentUser.uid);
+    if (!allowed) {
+      alert("You have reached your daily limit of 10 cases! Please check your profile for the reset timer.");
+      return;
+    }
+  }
+
   setButtonLoading(submitButton, true, "Judging...");
   hideVerdictPanel();
   startThinkingSequence();
@@ -697,7 +837,7 @@ async function judgeDebate() {
     const result = await postJson("/api/debate", { dispute, opinions });
     renderDebateResult(result);
     playAvatarPhase("thinking");
-    updateAvatarStatus(
+    updateCognixStatus(
       "Debate verdict",
       "Cognix has compared the room, weighed the strongest case, and is now explaining why that side wins.",
     );
@@ -705,7 +845,7 @@ async function judgeDebate() {
   } catch (error) {
     renderDebateError(error.message || "Cognix could not judge the debate.");
     playAvatarPhase("thinking");
-    updateAvatarStatus(
+    updateCognixStatus(
       "Connection issue",
       "Cognix could not complete the debate judgment. Check the server and API credentials, then try again.",
     );
@@ -753,7 +893,7 @@ function goToDebateCountStep() {
   }
 
   showDebateStep("count");
-  updateAvatarStatus(
+  updateCognixStatus(
     "Perspective setup",
     "Now choose how many different viewpoints should enter the debate before the argument cards appear.",
   );
@@ -948,7 +1088,7 @@ function hideVerdictPanel() {
   }
 }
 
-function updateAvatarStatus(label, text) {
+function updateCognixStatus(label, text) {
   const stateLabel = document.getElementById("avatarStateLabel");
   const stateText = document.getElementById("avatarStateText");
 
@@ -983,7 +1123,7 @@ function setAvatarState(state) {
     stage.dataset.phase = state;
   }
 
-  updateAvatarStatus(copy.label, copy.text);
+  updateCognixStatus(copy.label, copy.text);
 }
 
 function startThinkingSequence() {

@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", initHomePage);
 function initHomePage() {
   registerHomePlugins();
   setupPageTransitionLinks();
-  setupHomeAvatarFallback();
+  setupHomeCognixFallback();
   animateHomeIntro();
   bindScrollReveals();
   startHomeAmbientMotion();
@@ -74,8 +74,8 @@ function setupPageTransitionLinks() {
   });
 }
 
-function setupHomeAvatarFallback() {
-  const video = document.getElementById("heroAvatar");
+function setupHomeCognixFallback() {
+  const video = document.getElementById("heroCognix");
   const fallback = document.querySelector(".hero-avatar-core");
 
   if (!video || !fallback) {

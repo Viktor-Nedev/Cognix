@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognix | Auth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script type="module" src="./auth.js"></script>
+    <style>
+      .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 2rem; }
+      .auth-card { 
+        width: 100%; max-width: 440px; 
+        background: var(--glass-surface); 
+        border: 1px solid var(--glass-border); 
+        border-radius: 40px; 
+        padding: 2.5rem; 
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5); 
+        position: relative; 
+        overflow: hidden;
+      }
+      .auth-card::before {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-3)); 
+        opacity: 0.8;
+      }
+      .auth-header { text-align: center; margin-bottom: 2rem; }
+      .auth-header h1 { font-family: "Sora", sans-serif; font-size: 2.2rem; margin: 0 0 0.5rem; letter-spacing: -0.05em; color: var(--accent); }
+      .auth-header p { color: var(--muted); margin: 0; }
+      .auth-form-group { margin-bottom: 1.5rem; position: relative; }
+      .auth-form-group label { display: block; margin-bottom: 0.5rem; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; }
+      .auth-input { width: 100%; padding: 1rem 1.25rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: rgba(7,18,23,0.8); color: var(--text); font-family: inherit; font-size: 1rem; outline: none; transition: all 0.3s ease; }
+      .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(134, 241, 217, 0.1); }
+      .auth-button { width: 100%; padding: 1.1rem; border-radius: 999px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent-3)); color: #000; font-family: "Sora", sans-serif; font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: transform 0.2s; margin-top: 1rem; }
+      .auth-button:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(134, 241, 217, 0.2); }
+      .auth-switch { text-align: center; margin-top: 1.5rem; font-size: 0.95rem; color: var(--muted); }
+      .auth-switch button { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; }
+      .error-msg { color: #ff8d66; font-size: 0.85rem; margin-top: 0.5rem; text-align: center; min-height: 20px; }
+      .signup-only { display: none; }
+      .mode-signup .signup-only { display: block; }
+    </style>
+  </head>
+  <body class="theme-home">
+    <div class="backdrop" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-b"></div><div class="grid"></div><div class="noise"></div></div>
+    
+    <main class="auth-shell">
+      <div class="auth-card" id="authCard">
+        <div class="auth-header">
+          <h1 id="authTitle">Welcome Back</h1>
+          <p id="authSubtitle">Enter your details to continue.</p>
+        </div>
+        <form id="authForm">
+          <div class="auth-form-group signup-only">
+            <label for="regUsername">Username</label>
+            <input type="text" id="regUsername" class="auth-input" placeholder="e.g. cognix_user" />
+          </div>
+          <div class="auth-form-group">
+            <label for="authEmail">Email Address</label>
+            <input type="email" id="authEmail" class="auth-input" placeholder="name@example.com" required />
+          </div>
+          <div class="auth-form-group">
+            <label for="authPassword">Password</label>
+            <input type="password" id="authPassword" class="auth-input" placeholder="••••••••" required />
+          </div>
+          <div class="error-msg" id="authError"></div>
+          <button type="submit" class="auth-button" id="authSubmitBtn">Log In</button>
+        </form>
+        <div class="auth-switch">
+          <span id="authSwitchText">Don't have an account?</span>
+          <button type="button" id="authSwitchBtn">Sign Up</button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      let isSignup = false;
+      const card = document.getElementById("authCard");
+      const title = document.getElementById("authTitle");
+      const subtitle = document.getElementById("authSubtitle");
+      const submitBtn = document.getElementById("authSubmitBtn");
+      const switchText = document.getElementById("authSwitchText");
+      const switchBtn = document.getElementById("authSwitchBtn");
+      const errorMsg = document.getElementById("authError");
+      const form = document.getElementById("authForm");
+
+      // Simple GSAP entrance
+      if(window.gsap) {
+        window.gsap.from(card, { autoAlpha: 0, y: 50, scale: 0.95, duration: 1, ease: "power3.out" });
+      }
+
+      switchBtn.addEventListener("click", () => {
+        isSignup = !isSignup;
+        errorMsg.textContent = "";
+
+        if (window.gsap) {
+          window.gsap.to(card, { scale: 0.98, duration: 0.15, yoyo: true, repeat: 1 });
+        }
+
+        if(isSignup) {
+          card.classList.add("mode-signup");
+          title.textContent = "Create Account";
+          subtitle.textContent = "Start solving dilemmas visibly.";
+          submitBtn.textContent = "Sign Up";
+          switchText.textContent = "Already have an account?";
+          switchBtn.textContent = "Log In";
+          document.getElementById("regUsername").setAttribute("required", "true");
+        } else {
+          card.classList.remove("mode-signup");
+          title.textContent = "Welcome Back";
+          subtitle.textContent = "Enter your details to continue.";
+          submitBtn.textContent = "Log In";
+          switchText.textContent = "Don't have an account?";
+          switchBtn.textContent = "Sign Up";
+          document.getElementById("regUsername").removeAttribute("required");
+        }
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.textContent = "";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Please wait...";
+
+        const email = document.getElementById("authEmail").value.trim();
+        const pwd = document.getElementById("authPassword").value;
+        const user = document.getElementById("regUsername").value.trim();
+
+        try {
+          if (isSignup) {
+            await window.CognixAuth.signup(email, pwd, user);
+          } else {
+            await window.CognixAuth.login(email, pwd);
+          }
+          // On success, redirect to profile or back to testing
+          window.location.href = "./profile.html";
+        } catch (err) {
+          console.error("Auth Catch:", err);
+          errorMsg.innerText = String(err.message || err || "Authentication failed. Make sure Email/Password is enabled in Firebase Console.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = isSignup ? "Sign Up" : "Log In";
+        }
+      });
+    </script>
+  </body>
+</html>

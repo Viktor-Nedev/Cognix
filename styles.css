@@ -1443,16 +1443,132 @@ body::selection {
   margin-top: 0;
 }
 
+/* Premium Social Bar & Invites */
 .social-status-bar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.8rem 1.2rem;
-  border-radius: 12px;
-  background: rgba(134, 241, 217, 0.1);
+  background: rgba(134, 241, 217, 0.08); /* Sophisticated subtle teal tint */
   border: 1px solid rgba(134, 241, 217, 0.2);
-  margin: 1rem 0;
+  padding: 0.8rem 1.4rem;
+  border-radius: 20px;
+  margin: 1.5rem 0;
+  gap: 1.2rem;
+  position: relative;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  animation: barReveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes barReveal {
+  from { opacity: 0; transform: translateY(15px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#socialStatusText {
+  font-family: var(--font-mono);
   font-size: 0.9rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.social-invite-btn {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: #000;
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(134, 241, 217, 0.2);
+}
+
+.social-invite-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(134, 241, 217, 0.4);
+}
+
+.social-dropdown {
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  width: 300px;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  padding: 1.8rem;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.7);
+  z-index: 1000;
+  backdrop-filter: blur(25px);
+  transform-origin: top right;
+  animation: dropdownIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; scale: 0.8; transform: translateY(-10px); }
+  to { opacity: 1; scale: 1; transform: translateY(0); }
+}
+
+.social-dropdown h4 {
+  margin: 0 0 1.2rem;
+  font-family: "Sora", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 0.8rem;
+}
+
+.invite-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  margin-bottom: 0.6rem;
+  transition: all 0.2s ease;
+}
+
+.invite-list-item:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(134, 241, 217, 0.3);
+}
+
+.friend-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.mini-invite-btn {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  padding: 0.35rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mini-invite-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #000;
+}
+
+.mini-invite-btn:disabled {
+  border-color: rgba(255,255,255,0.1);
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .status-dot {
@@ -1460,19 +1576,26 @@ body::selection {
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  box-shadow: 0 0 12px var(--accent);
   animation: pulse 2s infinite;
 }
 
 .status-exit {
-  margin-left: auto;
   background: none;
   border: none;
   color: var(--accent-3);
-  text-decoration: underline;
+  text-decoration: none;
   cursor: pointer;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.status-exit:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .debate-verdict-panel {

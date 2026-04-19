@@ -6,7 +6,7 @@
     <title>Cognix | Visual AI Decisions</title>
     <meta
       name="description"
-      content="Cognix makes AI reasoning visible through an animated avatar and cinematic decision flows."
+      content="Cognix makes AI reasoning visible through an animated Cognix and cinematic decision flows."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,6 +20,7 @@
     <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script type="module" src="./auth.js"></script>
     <script defer src="./home.js"></script>
   </head>
   <body class="theme-home">
@@ -47,7 +48,8 @@
         <nav class="top-nav">
           <a href="#idea">Idea</a>
           <a href="#experience">Experience</a>
-          <a href="./avatar.html" data-transition-link>Test avatar</a>
+          <a href="./profile.html" class="auth-protected" style="display: none;">Profile</a>
+          <a href="./settings.html" class="auth-protected" style="display: none;">Settings</a>
         </nav>
       </header>
 
@@ -64,8 +66,8 @@
           </p>
 
           <div class="hero-actions reveal" data-reveal="fade-up">
-            <a class="button button-primary" href="./avatar.html" data-transition-link>
-              Test the avatar
+            <a class="button button-primary" href="./auth.html" data-transition-link>
+              Sign Up to Start
             </a>
             <a class="button button-secondary" href="#idea">
               Explore the concept
@@ -103,7 +105,7 @@
 
             <div class="hero-screen">
               <video
-                id="heroAvatar"
+                id="heroCognix"
                 class="hero-avatar-video"
                 autoplay
                 muted
@@ -122,11 +124,11 @@
           </div>
 
           <div class="hero-stage-copy">
-            <span class="tile-label">Live avatar state</span>
+            <span class="tile-label">Live Cognix state</span>
             <h2>Cognix waits, wakes up, then starts thinking on-screen.</h2>
             <p>
               The home page hints at the personality. The test page lets the
-              avatar react directly to the user's problem.
+              Cognix react directly to the user's problem.
             </p>
           </div>
         </aside>
@@ -164,7 +166,7 @@
             <span class="feature-index">03</span>
             <h3>Make the AI feel present</h3>
             <p>
-              The avatar gives the decision engine a visible nervous system so
+              The Cognix gives the decision engine a visible nervous system so
               the user can feel when it is waiting, activating, and thinking.
             </p>
           </article>
@@ -190,7 +192,7 @@
               <span class="sequence-code">02</span>
               <div>
                 <h3>Cognix breaks out of idle and starts thinking visibly.</h3>
-                <p>The avatar wakes up, the scene shifts, and the user immediately sees a live response.</p>
+                <p>The Cognix wakes up, the scene shifts, and the user immediately sees a live response.</p>
               </div>
             </article>
             <article class="sequence-node reveal" data-reveal="fade-up">
@@ -228,7 +230,7 @@
             </article>
             <article class="signal-chip">
               <span class="tile-label">Human</span>
-              <strong>The avatar reacts like a live intelligence</strong>
+              <strong>The Cognix reacts like a live intelligence</strong>
             </article>
             <article class="signal-chip">
               <span class="tile-label">Memorable</span>
@@ -236,8 +238,8 @@
             </article>
           </div>
 
-          <a class="inline-link" href="./avatar.html" data-transition-link>
-            Open the avatar test environment
+          <a class="inline-link" href="./cognix.html" data-transition-link>
+            Open the Cognix test environment
           </a>
         </div>
       </section>
@@ -245,14 +247,14 @@
       <section class="launch-ribbon reveal" data-reveal="scale-in">
         <div class="cta-copy">
           <p class="eyebrow">Next step</p>
-          <h2>Open the avatar and give Cognix a real problem.</h2>
+          <h2>Open the Cognix and give Cognix a real problem.</h2>
           <p>
             The test environment now supports both personal dilemmas and debate
             mode, so you can switch contexts and show more interesting AI behavior live.
           </p>
         </div>
-        <a class="button button-primary button-large" href="./avatar.html" data-transition-link>
-          Launch avatar test
+        <a class="button button-primary button-large" href="./auth.html" data-transition-link>
+          Sign Up to Start
         </a>
       </section>
     </main>

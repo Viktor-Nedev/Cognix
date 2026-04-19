@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cognix | Avatar Test</title>
+    <title>Cognix | Cognix Test</title>
     <meta
       name="description"
-      content="Test the Cognix avatar and submit a problem to trigger the visible thinking state."
+      content="Test the Cognix Cognix and submit a problem to trigger the visible thinking state."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,6 +19,7 @@
     <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script type="module" src="./auth.js"></script>
     <script defer src="./app.js"></script>
     <script type="module" src="./social.js"></script>
   </head>
@@ -44,17 +45,18 @@
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
 
-        <a class="button button-secondary" href="./index.html" data-transition-link>
-          Back to home
-        </a>
+        <nav class="top-nav header-actions" style="margin-right: 1rem;">
+          <a href="./profile.html" class="auth-protected" style="display: none;">Profile</a>
+          <a href="./settings.html" class="auth-protected" style="display: none;">Settings</a>
+        </nav>
       </header>
 
       <section class="avatar-playground">
         <div class="avatar-intro reveal" data-reveal="fade-up">
-          <p class="eyebrow">Avatar test environment</p>
+          <p class="eyebrow">Cognix test environment</p>
           <h1 class="hero-title avatar-page-title">Put the problem in front of Cognix.</h1>
           <p class="hero-lead narrow">
-            The avatar starts in its normal state, plays the activation clip,
+            The Cognix starts in its normal state, plays the activation clip,
             then stays in the thinking loop while the system focuses on the dilemma.
           </p>
         </div>
@@ -94,7 +96,7 @@
                 <div class="avatar-status">
                   <div class="avatar-status-head">
                     <div class="avatar-status-copy">
-                      <span class="tile-label">Avatar state</span>
+                      <span class="tile-label">avatar state</span>
                       <h2 id="avatarStateLabel">Normal standby</h2>
                     </div>
 
@@ -116,7 +118,7 @@
                   <div class="console-status-actions">
                     <label class="voice-switch" for="voiceEnabled">
                       <input type="checkbox" id="voiceEnabled" />
-                      <span>Avatar voice</span>
+                      <span>Cognix voice</span>
                     </label>
                     <p class="voice-hint" id="voiceHint">
                       Enable ElevenLabs voice playback for Cognix responses.
@@ -224,7 +226,16 @@
                   <div class="social-status-bar is-hidden" id="socialStatusBar">
                     <span class="status-dot"></span>
                     <span id="socialStatusText">Connected to Room: XXXX</span>
+                    
+                    <button class="social-invite-btn" id="socialInviteBtn">Invite Friends</button>
                     <button class="status-exit" id="socialExit">Exit</button>
+
+                    <div id="socialInviteDropdown" class="social-dropdown is-hidden">
+                        <h4>Invite Network</h4>
+                        <div id="socialInviteList">
+                            <!-- Friends injected here -->
+                        </div>
+                    </div>
                   </div>
 
                   <div class="debate-step is-active" data-debate-step="context">

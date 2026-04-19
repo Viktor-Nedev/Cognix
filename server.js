@@ -139,8 +139,8 @@ app.get("*", (request, response, next) => {
     return next();
   }
 
-  if (request.path === "/avatar" || request.path === "/avatar/") {
-    return response.sendFile(path.join(__dirname, "avatar.html"));
+  if (request.path === "/cognix" || request.path === "/cognix/") {
+    return response.sendFile(path.join(__dirname, "cognix.html"));
   }
 
   response.sendFile(path.join(__dirname, "index.html"));

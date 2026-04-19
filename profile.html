@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognix | Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
+    <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script type="module" src="./auth.js"></script>
+    <style>
+      .profile-shell { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+      .header-actions { display: flex; gap: 1rem; align-items: center; }
+      
+      .profile-card {
+        background: var(--glass-surface); border: 1px solid var(--glass-border);
+        border-radius: 30px; padding: 2.5rem; margin-top: 2rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4); position: relative; overflow: hidden;
+      }
+      
+      .profile-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
+      .profile-user h2 { font-size: 2.5rem; margin: 0; color: var(--accent); font-family: "Sora"; }
+      .profile-user p { color: var(--muted); margin: 0.5rem 0 0; }
+      
+      /* Progress Track */
+      .limit-section { margin-top: 2rem; background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+      .limit-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+      .limit-header h3 { margin: 0; font-size: 1.2rem; }
+      .limit-header span { color: var(--muted); font-size: 0.9rem; }
+      
+      .progress-bg { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; position: relative; }
+      .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-3)); width: 100%; transform-origin: left; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+      
+      .timer-box { margin-top: 1.5rem; font-family: monospace; font-size: 1.1rem; color: var(--accent-2); background: rgba(255, 208, 116, 0.1); display: inline-block; padding: 0.5rem 1rem; border-radius: 12px; }
+      
+      /* Friends Section */
+      .friends-section { margin-top: 2rem; }
+      .friends-section h3 { font-family: "Sora"; font-size: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line); padding-bottom: 1rem;}
+      
+      .search-box { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+      .search-input { flex: 1; padding: 1rem 1.25rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: rgba(7,18,23,0.8); color: var(--text); outline: none; }
+      .search-input:focus { border-color: var(--accent); }
+      .search-btn { padding: 0 1.5rem; border-radius: 20px; background: var(--accent); color: #000; border: none; font-weight: bold; cursor: pointer; }
+      
+      .friend-list { display: grid; gap: 1rem; }
+      .friend-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.2rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
+      .friend-card button { background: var(--surface); color: var(--accent); border: 1px solid var(--line); padding: 0.5rem 1rem; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+      .friend-card button:hover { background: var(--accent); color: #000; }
+    </style>
+  </head>
+  <body class="theme-home">
+    <div class="backdrop" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-c"></div><div class="noise"></div></div>
+    
+    <main class="profile-shell">
+      <header class="site-header compact">
+        <a class="brand" href="./index.html">
+          <span class="brand-mark">C</span>
+          <span class="brand-word">Cogni<span>x</span></span>
+        </a>
+        <nav class="top-nav header-actions">
+          <a href="./cognix.html">Cognix</a>
+          <a href="./settings.html">Settings</a>
+          <button id="logoutBtn" class="button button-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Log Out</button>
+        </nav>
+      </header>
+
+      <div class="profile-card" id="profilePanel">
+        <div class="profile-top">
+          <div class="profile-user">
+            <h2 id="userNameDisplay">Loading...</h2>
+            <p id="userEmailDisplay">...</p>
+          </div>
+        </div>
+
+        <div class="limit-section">
+          <div class="limit-header">
+            <h3>Daily Cases Limit</h3>
+            <span id="casesCountDisplay">-- / 10 remaining</span>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-bar" id="casesProgressBar" style="transform: scaleX(1)"></div>
+          </div>
+          <div class="timer-box" id="resetTimer">Next reset in: --:--:--</div>
+        </div>
+        
+        <div class="friends-section">
+          <h3>My Friends</h3>
+          <div class="friend-list" id="myFriendsList" style="margin-bottom: 2rem;">
+             <p style="color: var(--muted); font-size: 0.9rem;">Loading friends...</p>
+          </div>
+
+          <h3>Find Users</h3>
+          <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search users by username..." />
+            <button class="search-btn" id="searchBtn">Find</button>
+          </div>
+          <div class="friend-list" id="friendsList">
+            <!-- User search results or friends go here -->
+            <p style="color: var(--muted); font-size: 0.9rem;">Search for friends to invite them to live debates easily.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+       // Animations 
+       if (window.gsap) {
+          window.gsap.from("#profilePanel", { autoAlpha: 0, y: 30, duration: 1, ease: "power3.out" });
+       }
+
+       let countdownInterval;
+
+       function updateTimer(targetDateStr) {
+           const target = new Date(targetDateStr);
+           // Add 24 hours to last reset to get the next reset time
+           target.setHours(target.getHours() + 24);
+
+           if(countdownInterval) clearInterval(countdownInterval);
+           
+           countdownInterval = setInterval(() => {
+               const now = new Date();
+               const diff = target - now;
+               if (diff <= 0) {
+                   document.getElementById("resetTimer").textContent = "Limit resetting...";
+                   clearInterval(countdownInterval);
+                   // Optionally force auth reload
+                   return;
+               }
+               const h = Math.floor(diff / (1000 * 60 * 60));
+               const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+               const s = Math.floor((diff % (1000 * 60)) / 1000);
+               document.getElementById("resetTimer").textContent = `Next refresh in: ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+           }, 1000);
+       }
+
+       document.addEventListener('cognix_auth_ready', (e) => {
+          const { user, userData } = e.detail;
+          if (!user) {
+             window.location.href = "./auth.html";
+             return;
+          }
+
+          if (!userData) {
+              // Create default fallback if checkDailyLimit failed due to rules or latency
+              userData = { username: "Cognix User", casesLeft: 0 };
+          }
+          
+          document.getElementById("userNameDisplay").textContent = userData.username || "Cognix User";
+          document.getElementById("userEmailDisplay").textContent = user.email;
+          
+          const limit = userData.casesLeft ?? 10;
+          document.getElementById("casesCountDisplay").textContent = `${limit} / 10 cases remaining`;
+          
+          const ratio = limit / 10;
+          const bar = document.getElementById("casesProgressBar");
+          if(window.gsap) {
+             window.gsap.to(bar, { scaleX: ratio, duration: 1, ease: "expo.out", delay: 0.5 });
+          } else {
+             bar.style.transform = `scaleX(${ratio})`;
+          }
+
+          if (userData.lastReset) {
+              updateTimer(userData.lastReset);
+          }
+
+          loadMyFriends();
+       });
+
+       async function loadMyFriends() {
+           const list = document.getElementById("myFriendsList");
+           const friends = await window.CognixAuth.getFriends();
+           
+           if (!friends || friends.length === 0) {
+              list.innerHTML = "<p style='color: var(--muted); font-size: 0.9rem;'>No friends added yet. Search below to add friends!</p>";
+              return;
+           }
+
+           list.innerHTML = "";
+           friends.forEach(f => {
+               const item = document.createElement("div");
+               item.className = "friend-card";
+               item.innerHTML = `
+                  <div>
+                    <strong>${f.username}</strong>
+                    <div style="font-size: 0.8rem; color: var(--muted)">ID: ${f.uid.substring(0, 8)}...</div>
+                  </div>
+                  <div style="color: var(--accent); opacity: 0.7; font-size: 0.9rem;">Connected</div>
+               `;
+               list.appendChild(item);
+           });
+       }
+
+       document.getElementById("logoutBtn").addEventListener("click", () => {
+           window.CognixAuth.logout();
+       });
+
+       document.getElementById("searchBtn").addEventListener("click", async () => {
+           const query = document.getElementById("searchInput").value.trim();
+           if (!query) return;
+           
+           const list = document.getElementById("friendsList");
+           list.innerHTML = "<p>Searching...</p>";
+           
+           const results = await window.CognixAuth.searchUsers(query);
+           list.innerHTML = "";
+           
+           if (results.length === 0) {
+               list.innerHTML = "<p style='color: var(--muted)'>No users found.</p>";
+               return;
+           }
+           
+           results.forEach(u => {
+               const item = document.createElement("div");
+               item.className = "friend-card";
+               item.innerHTML = `
+                  <div>
+                    <strong>${u.username}</strong>
+                    <div style="font-size: 0.8rem; color: var(--muted)">ID: ${u.uid.substring(0, 8)}...</div>
+                  </div>
+                  <button onclick="addFriend('${u.uid}')">Add Friend</button>
+               `;
+               list.appendChild(item);
+           });
+       });
+
+       window.addFriend = async (uid) => {
+           await window.CognixAuth.addFriend(uid);
+           alert("Friend added to your network!");
+       };
+    </script>
+  </body>
+</html>

@@ -10,15 +10,15 @@ import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc, updateDoc } 
 // 5. Копирай обекта firebaseConfig и го постави тук:
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA0XBhY5Burt4YbQrta8Byig81UU-Zt82c",
+  authDomain: "avatar-8075f.firebaseapp.com",
+  projectId: "avatar-8075f",
+  storageBucket: "avatar-8075f.firebasestorage.app",
+  messagingSenderId: "734390838910",
+  appId: "1:734390838910:web:848d67dcf82dafa71dda2f",
+  measurementId: "G-K9GEPBN7ND"
 };
 
-// Инициализация
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
