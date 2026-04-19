@@ -41,7 +41,14 @@ const runtime = {
   activeAudioUrl: "",
   lastProblemSpeech: "",
   lastDebateSpeech: "",
+  social: {
+    room: null,
+    userId: localStorage.getItem('cognix_uid') || 'U-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+    unsubscribe: null
+  }
 };
+
+localStorage.setItem('cognix_uid', runtime.social.userId);
 
 document.addEventListener("DOMContentLoaded", initAvatarPage);
 
@@ -54,6 +61,7 @@ function initAvatarPage() {
   bindProblemForm();
   setupDebateLab();
   syncViewpointCards();
+  setupSocialDebate();
   playAvatarPhase("idle");
   setAvatarState("idle");
   animateAvatarPage();
@@ -512,15 +520,111 @@ function setupDebateLab() {
       setSelectedViewpointCount(button.dataset.count || "3");
     });
   });
+  if (form) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await judgeDebate();
+    });
+  }
+}
 
-  if (!form) {
-    return;
+function setupSocialDebate() {
+  const btnCreate = document.getElementById("socialOpenCreate");
+  const btnJoin = document.getElementById("socialOpenJoin");
+  const btnExit = document.getElementById("socialExit");
+  
+  if (btnCreate) {
+    btnCreate.addEventListener("click", async () => {
+      const context = document.getElementById("debateContext")?.value || "Social Debate";
+      const count = getSelectedViewpointCount();
+      
+      btnCreate.disabled = true;
+      btnCreate.textContent = "Creating...";
+      
+      const roomId = await window.CognixSocial.createDebateRoom(context, count);
+      
+      if (roomId) {
+        enterSocialRoom(roomId);
+      }
+      
+      btnCreate.disabled = false;
+      btnCreate.textContent = "Create Social Room";
+    });
+  }
+  
+  if (btnJoin) {
+    btnJoin.addEventListener("click", () => {
+      const roomId = prompt("Enter Room ID:");
+      if (roomId) {
+        joinSocialRoom(roomId.toUpperCase().trim());
+      }
+    });
+  }
+  
+  if (btnExit) {
+    btnExit.addEventListener("click", exitSocialRoom);
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await judgeDebate();
+  // Bind typing events to sync arguments
+  ["debateA", "debateB", "debateC", "debateD"].forEach((id, index) => {
+    const textarea = document.getElementById(id);
+    if (textarea) {
+        textarea.addEventListener("input", () => {
+             if (runtime.social.room) {
+                 window.CognixSocial.addArgument(runtime.social.room, runtime.social.userId, textarea.value);
+             }
+        });
+    }
   });
+}
+
+function enterSocialRoom(roomId) {
+  runtime.social.room = roomId;
+  document.getElementById("socialStatusBar").classList.remove("is-hidden");
+  document.getElementById("socialStatusText").textContent = "Connected to Room: " + roomId;
+  
+  // Show arguments step immediately
+  showDebateStep("arguments");
+  syncViewpointCards();
+
+  // Start listening
+  if (runtime.social.unsubscribe) runtime.social.unsubscribe();
+  runtime.social.unsubscribe = window.CognixSocial.joinDebateRoom(roomId, handleSocialSync);
+  
+  updateAvatarStatus("Social Room Active", "You are now in a live shared debate. Invite friends using ID: " + roomId);
+}
+
+function joinSocialRoom(roomId) {
+    enterSocialRoom(roomId);
+}
+
+function exitSocialRoom() {
+    if (runtime.social.unsubscribe) runtime.social.unsubscribe();
+    runtime.social.unsubscribe = null;
+    runtime.social.room = null;
+    document.getElementById("socialStatusBar").classList.add("is-hidden");
+    updateAvatarStatus("Social mode ended", "You have left the shared room.");
+}
+
+function handleSocialSync(data) {
+    // If the data came from us, don't overwrite local (to avoid cursor jump)
+    // But for others, update their fields.
+    // In this simple version, we'll try to map users to slots A, B, C, D
+    const userIds = Object.keys(data.arguments || []).sort();
+    
+    userIds.forEach((uid, index) => {
+        if (uid === runtime.social.userId) return; // Don't overwrite local typing
+        
+        const slotId = ["debateA", "debateB", "debateC", "debateD"][index];
+        const input = document.getElementById(slotId);
+        if (input) {
+            input.value = data.arguments[uid];
+        }
+    });
+
+    if (data.context && !document.getElementById("debateContext").value) {
+        document.getElementById("debateContext").value = data.context;
+    }
 }
 
 function syncViewpointCards() {

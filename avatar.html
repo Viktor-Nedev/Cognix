@@ -20,6 +20,7 @@
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
     <script defer src="./app.js"></script>
+    <script type="module" src="./social.js"></script>
   </head>
   <body class="theme-avatar">
     <div class="transition-overlay" aria-hidden="true">
@@ -210,6 +211,20 @@
                       <span class="tile-label">Debate mode</span>
                       <h3>Let Cognix moderate the room, compare the arguments, and decide which side is strongest.</h3>
                     </div>
+                    <div class="social-actions">
+                      <button type="button" class="button button-secondary" id="socialOpenCreate">
+                        Create Social Room
+                      </button>
+                      <button type="button" class="button button-secondary" id="socialOpenJoin">
+                        Join Room
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="social-status-bar is-hidden" id="socialStatusBar">
+                    <span class="status-dot"></span>
+                    <span id="socialStatusText">Connected to Room: XXXX</span>
+                    <button class="status-exit" id="socialExit">Exit</button>
                   </div>
 
                   <div class="debate-step is-active" data-debate-step="context">

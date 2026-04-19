@@ -1431,12 +1431,48 @@ body::selection {
   box-shadow: 0 0 0 4px rgba(134, 241, 217, 0.08);
 }
 
-.debate-actions {
+.debate-actions, .social-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+.social-actions {
+  margin-top: 0;
+}
+
+.social-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(134, 241, 217, 0.1);
+  border: 1px solid rgba(134, 241, 217, 0.2);
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: pulse 2s infinite;
+}
+
+.status-exit {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--accent-3);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
 }
 
 .debate-verdict-panel {
