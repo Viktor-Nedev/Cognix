@@ -169,21 +169,26 @@ app.get("/api/voices", async (_request, response) => {
   }
 });
 
-if (process.env.NODE_ENV !== "production") {
-  app.use(express.static(__dirname));
+// Helper to solve path differences between local and Vercel
+const getPublicPath = (file) => {
+  // Local __dirname is root, Vercel api/index.js __dirname is /api
+  const rootPath = __dirname.endsWith("api") ? path.join(__dirname, "..") : __dirname;
+  return path.join(rootPath, file);
+};
 
-  app.get("*", (request, response, next) => {
-    if (request.path.startsWith("/api/")) {
-      return next();
-    }
+app.use(express.static(__dirname.endsWith("api") ? path.join(__dirname, "..") : __dirname));
 
-    if (request.path === "/cognix" || request.path === "/cognix/") {
-      return response.sendFile(path.join(__dirname, "cognix.html"));
-    }
+app.get("*", (request, response, next) => {
+  if (request.path.startsWith("/api/")) {
+    return next();
+  }
 
-    response.sendFile(path.join(__dirname, "index.html"));
-  });
-}
+  if (request.path === "/cognix" || request.path === "/cognix/") {
+    return response.sendFile(getPublicPath("cognix.html"));
+  }
+
+  response.sendFile(getPublicPath("index.html"));
+});
 
 if (process.env.NODE_ENV !== "production") {
   app.listen(port, () => {
