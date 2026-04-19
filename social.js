@@ -22,6 +22,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+const LOCAL_ROOMS_KEY = "cognix_social_rooms";
+
+function readLocalRooms() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_ROOMS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalRooms(rooms) {
+  try {
+    localStorage.setItem(LOCAL_ROOMS_KEY, JSON.stringify(rooms));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function readLocalRoom(roomId) {
+  return readLocalRooms()[roomId] || null;
+}
+
 // Експортираме глобален обект, за да може да се ползва от app.js или конзолата
 window.CognixSocial = {
   db,
@@ -44,7 +66,20 @@ window.CognixSocial = {
       console.log("Room created! ID:", roomId);
       return roomId;
     } catch (e) {
-      console.error("Error creating room: ", e);
+      console.warn("Falling back to local social room:", e);
+      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const rooms = readLocalRooms();
+      rooms[roomId] = {
+        roomId,
+        status: "waiting",
+        context,
+        viewpointsCount,
+        arguments: {},
+        createdAt: new Date().toISOString(),
+        finalVerdict: null
+      };
+      writeLocalRooms(rooms);
+      return roomId;
     }
   },
 
@@ -52,23 +87,89 @@ window.CognixSocial = {
     console.log("Joining room:", roomId);
     const roomRef = doc(db, "debate_rooms", roomId);
     
+    const localRoom = readLocalRoom(roomId);
+    if (localRoom) {
+      let lastPayload = "";
+      const tick = () => {
+        const room = readLocalRoom(roomId);
+        if (!room) {
+          return;
+        }
+
+        const payload = JSON.stringify(room);
+        if (payload === lastPayload) {
+          return;
+        }
+
+        lastPayload = payload;
+        if (callback) callback(room);
+      };
+
+      tick();
+      const interval = setInterval(tick, 500);
+      return () => clearInterval(interval);
+    }
+
     // Връщаме функция (unsubsribe) за спиране на слушането
-    return onSnapshot(roomRef, (docSnap) => {
-      if (docSnap.exists()) {
-         console.log("Room data changed:", docSnap.data());
-         if (callback) callback(docSnap.data());
-      } else {
-         console.error("Room does not exist!");
-      }
-    });
+    try {
+      return onSnapshot(roomRef, (docSnap) => {
+        if (docSnap.exists()) {
+          console.log("Room data changed:", docSnap.data());
+          if (callback) callback(docSnap.data());
+        } else {
+          console.warn("Room does not exist in Firestore, using local fallback.");
+          const room = readLocalRoom(roomId);
+          if (room && callback) {
+            callback(room);
+          }
+        }
+      });
+    } catch (error) {
+      console.warn("Falling back to local room listener:", error);
+      let lastPayload = "";
+
+      const tick = () => {
+        const room = readLocalRoom(roomId);
+        if (!room) {
+          return;
+        }
+
+        const payload = JSON.stringify(room);
+        if (payload === lastPayload) {
+          return;
+        }
+
+        lastPayload = payload;
+        if (callback) callback(room);
+      };
+
+      tick();
+      const interval = setInterval(tick, 500);
+      return () => clearInterval(interval);
+    }
   },
   
   addArgument: async (roomId, userId, argumentText) => {
     const roomRef = doc(db, "debate_rooms", roomId);
     // Ъпдейтваме специфично поле arguments.userId
-    await updateDoc(roomRef, {
-        [`arguments.${userId}`]: argumentText
-    });
+    try {
+      await updateDoc(roomRef, {
+          [`arguments.${userId}`]: argumentText
+      });
+    } catch (error) {
+      console.warn("Updating local social room fallback:", error);
+      const rooms = readLocalRooms();
+      const room = rooms[roomId];
+      if (!room) {
+        return;
+      }
+
+      room.arguments = room.arguments || {};
+      room.arguments[userId] = argumentText;
+      room.updatedAt = new Date().toISOString();
+      rooms[roomId] = room;
+      writeLocalRooms(rooms);
+    }
   }
 };
 

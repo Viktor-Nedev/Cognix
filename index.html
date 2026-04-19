@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cognix | Visual AI Decisions</title>
+    <link rel="icon" type="image/png" href="./images/tablogocognix.png" />
     <meta
       name="description"
       content="Cognix makes AI reasoning visible through an animated Cognix and cinematic decision flows."
@@ -20,6 +21,7 @@
     <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./transition.js"></script>
     <script type="module" src="./auth.js"></script>
     <script defer src="./home.js"></script>
   </head>
@@ -40,16 +42,16 @@
 
     <main class="site-shell">
       <header class="site-header reveal" data-reveal="fade-up">
-        <a class="brand" href="./index.html">
-          <span class="brand-mark">C</span>
+        <a class="brand" href="./index.html" data-transition-link>
+          <img class="brand-logo" src="./images/Cognix_logo.png" alt="Cognix" />
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
 
         <nav class="top-nav">
           <a href="#idea">Idea</a>
           <a href="#experience">Experience</a>
-          <a href="./profile.html" class="auth-protected" style="display: none;">Profile</a>
-          <a href="./settings.html" class="auth-protected" style="display: none;">Settings</a>
+          <a href="./profile.html" data-transition-link class="auth-protected" style="display: none;">Profile</a>
+          <a href="./settings.html" data-transition-link class="auth-protected" style="display: none;">Settings</a>
         </nav>
       </header>
 

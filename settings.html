@@ -4,12 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cognix | Settings</title>
+    <link rel="icon" type="image/png" href="./images/tablogocognix.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./transition.js"></script>
     <style>
       .settings-shell { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
       .header-actions { display: flex; gap: 1rem; align-items: center; }
@@ -27,6 +29,17 @@
       
       .setting-info h3 { margin: 0 0 0.4rem; font-size: 1.1rem; }
       .setting-info p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+      .setting-control { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; min-width: 220px; }
+      .voice-select {
+        min-width: 220px;
+        padding: 0.8rem 1rem;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.04);
+        color: var(--text);
+        font: inherit;
+      }
+      .voice-select:focus { outline: 2px solid rgba(134, 241, 217, 0.28); outline-offset: 2px; }
       
       /* Toggle Switch */
       .switch { position: relative; display: inline-block; width: 56px; height: 30px; }
@@ -39,17 +52,23 @@
     </style>
   </head>
   <body class="theme-home">
+    <div class="transition-overlay" aria-hidden="true">
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+    </div>
+
     <div class="backdrop" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-b"></div><div class="noise"></div></div>
     
     <main class="settings-shell">
       <header class="site-header compact">
-        <a class="brand" href="./index.html">
-          <span class="brand-mark">C</span>
+        <a class="brand" href="./index.html" data-transition-link>
+          <img class="brand-logo" src="./images/Cognix_logo.png" alt="Cognix" />
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
         <nav class="top-nav header-actions">
-          <a href="./cognix.html">Cognix</a>
-          <a href="./profile.html">Profile</a>
+          <a href="./cognix.html" data-transition-link>Cognix</a>
+          <a href="./profile.html" data-transition-link>Profile</a>
         </nav>
       </header>
 
@@ -58,13 +77,18 @@
         
         <div class="setting-row">
           <div class="setting-info">
-            <h3>Cognix Voice</h3>
-            <p>Allow the AI to speak reasoning and verdicts aloud.</p>
+            <h3>ElevenLabs Voice</h3>
+            <p>Allow the AI to speak reasoning and verdicts aloud using ElevenLabs.</p>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="voiceSetting" checked>
-            <span class="slider"></span>
-          </label>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="voiceSetting" checked>
+              <span class="slider"></span>
+            </label>
+            <select id="voiceSelect" class="voice-select" aria-label="Select ElevenLabs voice">
+              <option value="">Loading voices...</option>
+            </select>
+          </div>
         </div>
 
         <div class="setting-row">
@@ -98,6 +122,7 @@
        }
 
        const voiceToggle = document.getElementById("voiceSetting");
+       const voiceSelect = document.getElementById("voiceSelect");
        const animToggle = document.getElementById("animSetting");
        
        // Load states
@@ -108,6 +133,8 @@
            voiceToggle.checked = true; // default on as requested
            localStorage.setItem("cognix_voice", "true");
        }
+
+       const savedVoiceId = localStorage.getItem("cognix_voice_id") || "";
 
        const savedAnim = localStorage.getItem("cognix_anim");
        if (savedAnim !== null) {
@@ -122,6 +149,57 @@
        animToggle.addEventListener("change", (e) => {
            localStorage.setItem("cognix_anim", e.target.checked);
        });
+
+       function setVoiceOptions(voices, defaultVoiceId) {
+          const currentValue = localStorage.getItem("cognix_voice_id") || defaultVoiceId || "";
+          const options = [];
+          if (defaultVoiceId) {
+            options.push({ voice_id: defaultVoiceId, name: "Default voice" });
+          }
+          voices.forEach((voice) => {
+            if (!voice.voice_id) return;
+            if (options.some((item) => item.voice_id === voice.voice_id)) return;
+            options.push(voice);
+          });
+          if (currentValue && !options.some((item) => item.voice_id === currentValue)) {
+            options.push({ voice_id: currentValue, name: "Saved voice ID" });
+          }
+          if (!options.length) {
+            options.push({ voice_id: currentValue || "", name: "Default voice" });
+          }
+
+          voiceSelect.innerHTML = "";
+          options.forEach((voice) => {
+            const option = document.createElement("option");
+            option.value = voice.voice_id;
+            option.textContent = voice.name + (voice.category ? " (" + voice.category + ")" : "");
+            voiceSelect.appendChild(option);
+          });
+
+          voiceSelect.value = currentValue && options.some((item) => item.voice_id === currentValue)
+            ? currentValue
+            : options[0].voice_id;
+
+          localStorage.setItem("cognix_voice_id", voiceSelect.value || "");
+       }
+
+       voiceSelect.addEventListener("change", (e) => {
+          localStorage.setItem("cognix_voice_id", e.target.value);
+       });
+
+       fetch("/api/voices")
+         .then((response) => response.json())
+         .then((data) => {
+            setVoiceOptions(Array.isArray(data.voices) ? data.voices : [], data.defaultVoiceId || "");
+         })
+         .catch(() => {
+            voiceSelect.innerHTML = "";
+            const option = document.createElement("option");
+            option.value = savedVoiceId || "";
+            option.textContent = savedVoiceId ? "Saved voice ID" : "Default voice";
+            voiceSelect.appendChild(option);
+            voiceSelect.value = savedVoiceId || "";
+         });
     </script>
   </body>
 </html>

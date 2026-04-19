@@ -6,7 +6,7 @@ const AVATAR_SOURCES = {
 
 const AVATAR_COPY = {
   idle: {
-    label: "Normal standby",
+    label: "Problem solving",
     text: "Cognix is waiting for a problem. When you submit one, it will wake up and shift into the thinking loop.",
   },
   intro: {
@@ -36,16 +36,20 @@ const runtime = {
   reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   videoToken: 0,
   activeMode: "problem",
+  debateView: "intake",
   debateStep: "context",
   voiceEnabled: localStorage.getItem("cognix_voice") !== "false",
+  voiceId: localStorage.getItem("cognix_voice_id") || "",
   activeAudioUrl: "",
+  lastProblemText: "",
   lastProblemSpeech: "",
   lastDebateSpeech: "",
   social: {
     room: null,
     userId: localStorage.getItem('cognix_uid') || 'U-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
     unsubscribe: null
-  }
+  },
+  thinkingInterval: null
 };
 
 localStorage.setItem('cognix_uid', runtime.social.userId);
@@ -57,13 +61,18 @@ function initAvatarPage() {
   setupPageTransitionLinks();
   setupModeConsole();
   setupVoiceConsole();
+  setupDebateViewControls();
   buildProblemChips();
   bindProblemForm();
+  setupProblemResetButton();
+  setupDebateResetButton();
   setupDebateLab();
   syncViewpointCards();
   setupSocialDebate();
   playAvatarPhase("idle");
   setAvatarState("idle");
+  syncModePanels();
+  setDebateView("intake", { silent: true });
   animateAvatarPage();
   startAvatarAmbientMotion();
 }
@@ -85,43 +94,7 @@ function registerAvatarPlugins() {
 }
 
 function setupPageTransitionLinks() {
-  const overlayPanels = document.querySelectorAll(".transition-panel");
-  const links = document.querySelectorAll("[data-transition-link]");
-
-  if (!window.gsap || runtime.reduced || !overlayPanels.length) {
-    return;
-  }
-
-  window.gsap.set(overlayPanels, { scaleY: 1, transformOrigin: "top center" });
-  window.gsap.to(overlayPanels, {
-    scaleY: 0,
-    transformOrigin: "bottom center",
-    duration: 0.9,
-    stagger: 0.09,
-    ease: "cognixEase",
-    delay: 0.08,
-  });
-
-  links.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const href = link.getAttribute("href");
-      if (!href || href.startsWith("#")) {
-        return;
-      }
-
-      event.preventDefault();
-      window.gsap.to(overlayPanels, {
-        scaleY: 1,
-        transformOrigin: "top center",
-        duration: 0.55,
-        stagger: 0.07,
-        ease: "cognixEase",
-        onComplete: () => {
-          window.location.href = href;
-        },
-      });
-    });
-  });
+  window.CognixTransitions?.init();
 }
 
 function setupModeConsole() {
@@ -146,7 +119,7 @@ function setupVoiceConsole() {
       runtime.voiceEnabled = checkbox.checked;
       updateVoiceHint(
         checkbox.checked
-          ? "Cognix voice is enabled. Cognix will speak after each AI response."
+          ? "ElevenLabs voice is enabled. Cognix will speak after each AI response."
           : "Enable ElevenLabs voice playback for Cognix responses.",
       );
     });
@@ -171,29 +144,33 @@ function setupVoiceConsole() {
 
 function setActiveMode(mode) {
   runtime.activeMode = mode;
+  const shell = document.querySelector(".avatar-shell-page");
+  if (shell) {
+    shell.classList.remove("is-result-mode");
+  }
   playAvatarPhase("idle");
   const stage = document.querySelector(".avatar-stage-center");
   if (stage) {
     stage.dataset.phase = "idle";
   }
 
-  document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.modePanel === mode);
-  });
-
   document.querySelectorAll(".mode-toggle").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === mode);
   });
 
   if (mode === "debate") {
+    setDebateView("intake", { silent: true });
     resetDebateFlow();
     updateCognixStatus(
       "Debate intake",
       "Start by describing the dispute. After that, Cognix will ask how many viewpoints should enter the room.",
     );
   } else {
+    setDebateView("intake", { silent: true });
     setAvatarState("idle");
   }
+
+  syncModePanels();
 
   if (!window.gsap || runtime.reduced) {
     return;
@@ -209,6 +186,70 @@ function setActiveMode(mode) {
     { autoAlpha: 0, y: 18 },
     { autoAlpha: 1, y: 0, duration: 0.55, ease: "cognixEase" },
   );
+}
+
+window.switchMode = setActiveMode;
+
+function syncModePanels() {
+  const problemPanel = document.querySelector(".problem-console");
+  const debatePanel = document.querySelector(".debate-console");
+  const modeConsole = document.querySelector(".mode-console");
+  const showProblem = runtime.activeMode === "problem";
+  const showDebate = runtime.activeMode === "debate";
+
+  if (problemPanel) {
+    problemPanel.classList.toggle("is-active", showProblem);
+  }
+
+  if (debatePanel) {
+    debatePanel.classList.toggle("is-active", showDebate);
+  }
+
+  if (modeConsole) {
+    modeConsole.dataset.debateView = runtime.activeMode === "debate" ? runtime.debateView : "problem";
+  }
+}
+
+function setDebateView(view, options = {}) {
+  runtime.debateView = view;
+
+  const modeConsole = document.querySelector(".mode-console");
+  const openOnlineDebate = document.getElementById("openOnlineDebate");
+  const backToDebateIntake = document.getElementById("backToDebateIntake");
+  const debateRail = document.getElementById("debateThinkingRail");
+
+  if (modeConsole) {
+    modeConsole.dataset.debateView = runtime.activeMode === "debate" ? view : "problem";
+  }
+
+  if (openOnlineDebate) {
+    openOnlineDebate.classList.toggle("is-hidden", runtime.activeMode !== "debate" || view !== "intake");
+  }
+
+  if (backToDebateIntake) {
+    backToDebateIntake.classList.toggle("is-hidden", runtime.activeMode !== "debate" || view !== "online");
+  }
+
+  hideDebateThinkingRail();
+
+  syncModePanels();
+
+  if (runtime.activeMode !== "debate" || options.silent) {
+    return;
+  }
+
+  if (view === "intake") {
+    updateCognixStatus(
+      "Debate intake",
+      "Start by describing the dispute. After that, Cognix will ask how many viewpoints should enter the room.",
+    );
+  } else {
+    resetDebateFlow();
+    updateCognixStatus(
+      "Online debate",
+      "Cognix is now moderating the room, comparing the arguments, and deciding which side is strongest.",
+    );
+  }
 }
 
 function buildProblemChips() {
@@ -238,6 +279,23 @@ function buildProblemChips() {
   });
 }
 
+function setupDebateViewControls() {
+  const openOnlineDebate = document.getElementById("openOnlineDebate");
+  const backToDebateIntake = document.getElementById("backToDebateIntake");
+
+  if (openOnlineDebate) {
+    openOnlineDebate.addEventListener("click", () => {
+      setDebateView("online");
+    });
+  }
+
+  if (backToDebateIntake) {
+    backToDebateIntake.addEventListener("click", () => {
+      setDebateView("intake");
+    });
+  }
+}
+
 function trimProblem(problem) {
   return problem.length > 38 ? problem.slice(0, 38) + "..." : problem;
 }
@@ -253,6 +311,27 @@ function bindProblemForm() {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await submitProblem(input.value);
+  });
+}
+
+function setupProblemResetButton() {
+  const button = document.getElementById("resetProblemFlow");
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener("click", resetProblemFlow);
+}
+
+function setupDebateResetButton() {
+  const button = document.getElementById("debateResetFlow");
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener("click", () => {
+    resetDebateFlow();
+    setDebateView("intake", { silent: true });
   });
 }
 
@@ -283,14 +362,16 @@ async function submitProblem(rawProblem) {
   }
 
   const submitButton = document.getElementById("problemSubmitButton");
+  runtime.lastProblemText = problem;
   setButtonLoading(submitButton, true, "Analyzing...");
-  showProblemLoading(problem);
   startThinkingSequence();
+  showProblemLoading(problem);
 
   try {
     const result = await postJson("/api/problem", { problem });
+
     renderProblemResult(result);
-    playAvatarPhase("thinking");
+    void saveProblemHistoryEntry(problem, result);
     updateCognixStatus(
       "Decision ready",
       "Cognix has mapped the dilemma, compared the paths, and is now presenting the recommendation.",
@@ -322,7 +403,7 @@ function showProblemLoading(problem) {
   const decisionWhy = document.getElementById("problemDecisionWhy");
   const nextStep = document.getElementById("problemNextStep");
 
-  panel?.classList.remove("is-hidden");
+  panel?.classList.add("is-hidden");
   if (title) {
     title.textContent = "Reading the dilemma...";
   }
@@ -350,8 +431,6 @@ function showProblemLoading(problem) {
   if (nextStep) {
     nextStep.textContent = "";
   }
-
-  animatePanelReveal(panel);
 }
 
 function renderProblemResult(result) {
@@ -379,6 +458,36 @@ function renderProblemResult(result) {
     }
   }
 
+  // Show result in the side status area
+  const problemConsole = document.querySelector(".problem-console");
+  const resultPanel = document.getElementById("problemResult");
+  const resetRow = document.getElementById("problemResetRow");
+  const thinkingLoopCopy = document.getElementById("thinkingLoopCopy");
+  const shell = document.querySelector(".avatar-shell-page");
+
+  if (problemConsole) {
+    problemConsole.classList.remove("is-thinking");
+    problemConsole.classList.add("is-result");
+  }
+
+  if (shell) {
+    shell.classList.add("is-result-mode");
+  }
+
+  if (resultPanel) {
+    resultPanel.classList.remove("is-hidden");
+  }
+
+  if (resetRow) {
+    resetRow.classList.remove("is-hidden");
+  }
+  if (thinkingLoopCopy) {
+    thinkingLoopCopy.classList.add("is-hidden");
+  }
+
+  stopThinkingCycle(); // Ensure cycle stops
+  playAvatarPhase("idle");
+
   if (summary) summary.textContent = result.summary || "";
   if (understanding) understanding.textContent = result.understanding || "";
   if (options) options.innerHTML = renderDecisionOptions(result.options || []);
@@ -393,6 +502,29 @@ function renderProblemResult(result) {
   if (nextStep) nextStep.textContent = result.decision?.nextStep ? "Next step: " + result.decision.nextStep : "";
 
   animateProblemResult();
+}
+
+async function saveProblemHistoryEntry(problem, result) {
+  if (!window.CognixAuth?.saveProblemHistory) {
+    return;
+  }
+
+  const entry = {
+    problem,
+    title: result?.title || "Decision flow ready.",
+    summary: result?.summary || "",
+    understanding: result?.understanding || "",
+    options: Array.isArray(result?.options) ? result.options : [],
+    evaluation: result?.evaluation || null,
+    decision: result?.decision || null,
+    spokenResponse: result?.spokenResponse || "",
+  };
+
+  try {
+    await window.CognixAuth.saveProblemHistory(entry);
+  } catch (error) {
+    console.warn("Could not save problem history entry:", error);
+  }
 }
 
 function renderProblemError(message) {
@@ -410,6 +542,21 @@ function renderProblemError(message) {
   panel?.classList.remove("is-hidden");
   runtime.lastProblemSpeech = "";
   setSpeakButtonState("speakDecision", false);
+
+  const problemConsole = document.querySelector(".problem-console");
+  if (problemConsole) {
+    problemConsole.classList.remove("is-thinking", "is-result");
+  }
+
+  const shell = document.querySelector(".avatar-shell-page");
+  if (shell) {
+    shell.classList.remove("is-result-mode");
+  }
+
+  const thinkingLoopCopy = document.getElementById("thinkingLoopCopy");
+  if (thinkingLoopCopy) {
+    thinkingLoopCopy.classList.add("is-hidden");
+  }
 
   if (title) {
     title.textContent = "AI analysis unavailable.";
@@ -546,26 +693,37 @@ function setupSocialDebate() {
   const btnCreate = document.getElementById("socialOpenCreate");
   const btnJoin = document.getElementById("socialOpenJoin");
   const btnExit = document.getElementById("socialExit");
-  
+
   if (btnCreate) {
     btnCreate.addEventListener("click", async () => {
       const context = document.getElementById("debateContext")?.value || "Social Debate";
       const count = getSelectedViewpointCount();
-      
+
       btnCreate.disabled = true;
       btnCreate.textContent = "Creating...";
-      
-      const roomId = await window.CognixSocial.createDebateRoom(context, count);
-      
-      if (roomId) {
-        enterSocialRoom(roomId);
+
+      try {
+        if (!window.CognixSocial?.createDebateRoom) {
+          throw new Error("Social debate module is not loaded.");
+        }
+
+        const roomId = await window.CognixSocial.createDebateRoom(context, count);
+
+        if (roomId) {
+          enterSocialRoom(roomId);
+        } else {
+          throw new Error("Room creation failed. Please check Firestore access.");
+        }
+      } catch (error) {
+        alert(error.message || "Could not create the social room.");
+        console.error(error);
+      } finally {
+        btnCreate.disabled = false;
+        btnCreate.textContent = "Create Social Room";
       }
-      
-      btnCreate.disabled = false;
-      btnCreate.textContent = "Create Social Room";
     });
   }
-  
+
   if (btnJoin) {
     btnJoin.addEventListener("click", () => {
       const roomId = prompt("Enter Room ID:");
@@ -574,93 +732,93 @@ function setupSocialDebate() {
       }
     });
   }
-  
+
   if (btnExit) {
     btnExit.addEventListener("click", () => {
-       document.getElementById("socialInviteDropdown")?.classList.add("is-hidden");
-       exitSocialRoom();
+      document.getElementById("socialInviteDropdown")?.classList.add("is-hidden");
+      exitSocialRoom();
     });
   }
 
   const btnInvite = document.getElementById("socialInviteBtn");
   if (btnInvite) {
-      btnInvite.addEventListener("click", async () => {
-          const dropdown = document.getElementById("socialInviteDropdown");
-          const list = document.getElementById("socialInviteList");
-          if (!dropdown.classList.contains("is-hidden")) {
-               dropdown.classList.add("is-hidden");
-               return;
-          }
-          
-          dropdown.classList.remove("is-hidden");
-          list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>Loading network...</p>";
-          
-          if (!window.CognixAuth) return;
-          const friends = await window.CognixAuth.getFriends();
-          
-          if (friends.length === 0) {
-              list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>No friends added yet.</p>";
-              return;
-          }
-          
-          list.innerHTML = "";
-          friends.forEach(f => {
-               const wrap = document.createElement("div");
-               wrap.className = "invite-list-item";
-               
-               const name = document.createElement("span");
-               name.className = "friend-name";
-               name.textContent = f.username;
-               
-               const invBtn = document.createElement("button");
-               invBtn.className = "mini-invite-btn";
-               invBtn.textContent = "Invite";
-               invBtn.onclick = async () => {
-                   invBtn.textContent = "Sent!";
-                   invBtn.disabled = true;
-                   await window.CognixAuth.sendInvite(f.uid, runtime.social.room);
-               };
-               
-               wrap.appendChild(name);
-               wrap.appendChild(invBtn);
-               list.appendChild(wrap);
-          });
+    btnInvite.addEventListener("click", async () => {
+      const dropdown = document.getElementById("socialInviteDropdown");
+      const list = document.getElementById("socialInviteList");
+      if (!dropdown.classList.contains("is-hidden")) {
+        dropdown.classList.add("is-hidden");
+        return;
+      }
+
+      dropdown.classList.remove("is-hidden");
+      list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>Loading network...</p>";
+
+      if (!window.CognixAuth) return;
+      const friends = await window.CognixAuth.getFriends();
+
+      if (friends.length === 0) {
+        list.innerHTML = "<p style='font-size: 0.8rem; color: var(--muted)'>No friends added yet.</p>";
+        return;
+      }
+
+      list.innerHTML = "";
+      friends.forEach(f => {
+        const wrap = document.createElement("div");
+        wrap.className = "invite-list-item";
+
+        const name = document.createElement("span");
+        name.className = "friend-name";
+        name.textContent = f.username;
+
+        const invBtn = document.createElement("button");
+        invBtn.className = "mini-invite-btn";
+        invBtn.textContent = "Invite";
+        invBtn.onclick = async () => {
+          invBtn.textContent = "Sent!";
+          invBtn.disabled = true;
+          await window.CognixAuth.sendInvite(f.uid, runtime.social.room);
+        };
+
+        wrap.appendChild(name);
+        wrap.appendChild(invBtn);
+        list.appendChild(wrap);
       });
+    });
   }
 
   // Bind typing events to sync arguments
   ["debateA", "debateB", "debateC", "debateD"].forEach((id, index) => {
     const textarea = document.getElementById(id);
     if (textarea) {
-        textarea.addEventListener("input", () => {
-             if (runtime.social.room) {
-                 window.CognixSocial.addArgument(runtime.social.room, runtime.social.userId, textarea.value);
-             }
-        });
+      textarea.addEventListener("input", () => {
+        if (runtime.social.room) {
+          window.CognixSocial.addArgument(runtime.social.room, runtime.social.userId, textarea.value);
+        }
+      });
     }
   });
 
   // Global Invite Listener
   document.addEventListener('cognix_receive_invite', (e) => {
-      const invite = e.detail;
-      if (runtime.social.room === invite.roomId) {
-         // I am already in this room
-         window.CognixAuth.clearInvite(invite);
-         return;
-      }
-      
-      const banner = document.createElement("div");
-      banner.style.position = "fixed";
-      banner.style.bottom = "20px";
-      banner.style.right = "20px";
-      banner.style.background = "var(--surface)";
-      banner.style.border = "1px solid var(--accent)";
-      banner.style.padding = "1rem";
-      banner.style.borderRadius = "12px";
-      banner.style.zIndex = "9999";
-      banner.style.boxShadow = "0 10px 40px rgba(0,0,0,0.5)";
-      
-      banner.innerHTML = `
+    const invite = e.detail;
+    if (runtime.social.room === invite.roomId) {
+      // I am already in this room
+      window.CognixAuth.clearInvite(invite);
+      return;
+    }
+
+    const banner = document.createElement("div");
+    banner.style.position = "fixed";
+    banner.style.bottom = "20px";
+    banner.style.right = "20px";
+    banner.style.background = "var(--surface)";
+    banner.style.border = "1px solid var(--accent)";
+    banner.style.padding = "1rem";
+    banner.style.borderRadius = "12px";
+    banner.style.zIndex = "9999";
+    banner.style.boxShadow = "0 10px 40px rgba(0,0,0,0.5)";
+
+    banner.innerHTML = `
           <h4 style="margin: 0 0 0.5rem; color: var(--accent);">Social Debate Invite</h4>
           <p style="margin: 0 0 1rem; font-size: 0.9rem;"><strong>${invite.from}</strong> invited you to join their decision room!</p>
           <div style="display: flex; gap: 0.5rem;">
@@ -668,39 +826,39 @@ function setupSocialDebate() {
               <button id="decInv" style="background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">Decline</button>
           </div>
       `;
-      
-      document.body.appendChild(banner);
-      if (window.gsap) {
-          window.gsap.from(banner, {y: 50, autoAlpha: 0, duration: 0.5, ease: "back.out(1.7)"});
+
+    document.body.appendChild(banner);
+    if (window.gsap) {
+      window.gsap.from(banner, { y: 50, autoAlpha: 0, duration: 0.5, ease: "back.out(1.7)" });
+    }
+
+    banner.querySelector("#accInv").onclick = async () => {
+      banner.remove();
+      await window.CognixAuth.clearInvite(invite);
+      if (window.location.pathname.indexOf("cognix.html") === -1) {
+        // Store invite to join after redirect
+        localStorage.setItem("cognix_pending_room", invite.roomId);
+        window.location.href = "./cognix.html";
+      } else {
+        switchMode("debate");
+        joinSocialRoom(invite.roomId);
       }
-      
-      banner.querySelector("#accInv").onclick = async () => {
-          banner.remove();
-          await window.CognixAuth.clearInvite(invite);
-          if (window.location.pathname.indexOf("cognix.html") === -1) {
-              // Store invite to join after redirect
-              localStorage.setItem("cognix_pending_room", invite.roomId);
-              window.location.href = "./cognix.html";
-          } else {
-              switchMode("debate");
-              joinSocialRoom(invite.roomId);
-          }
-      };
-      
-      banner.querySelector("#decInv").onclick = async () => {
-          banner.remove();
-          await window.CognixAuth.clearInvite(invite);
-      };
+    };
+
+    banner.querySelector("#decInv").onclick = async () => {
+      banner.remove();
+      await window.CognixAuth.clearInvite(invite);
+    };
   });
 
   // Handle pending joins after redirect
   const pendingRoom = localStorage.getItem("cognix_pending_room");
   if (pendingRoom) {
-      localStorage.removeItem("cognix_pending_room");
-      setTimeout(() => {
-          switchMode("debate");
-          joinSocialRoom(pendingRoom);
-      }, 500);
+    localStorage.removeItem("cognix_pending_room");
+    setTimeout(() => {
+      switchMode("debate");
+      joinSocialRoom(pendingRoom);
+    }, 500);
   }
 }
 
@@ -708,49 +866,46 @@ function enterSocialRoom(roomId) {
   runtime.social.room = roomId;
   document.getElementById("socialStatusBar").classList.remove("is-hidden");
   document.getElementById("socialStatusText").textContent = "Connected to Room: " + roomId;
-  
-  // Show arguments step immediately
-  showDebateStep("arguments");
-  syncViewpointCards();
+  setDebateView("online", { silent: true });
 
   // Start listening
   if (runtime.social.unsubscribe) runtime.social.unsubscribe();
   runtime.social.unsubscribe = window.CognixSocial.joinDebateRoom(roomId, handleSocialSync);
-  
+
   updateCognixStatus("Social Room Active", "You are now in a live shared debate. Invite friends using ID: " + roomId);
 }
 
 function joinSocialRoom(roomId) {
-    enterSocialRoom(roomId);
+  enterSocialRoom(roomId);
 }
 
 function exitSocialRoom() {
-    if (runtime.social.unsubscribe) runtime.social.unsubscribe();
-    runtime.social.unsubscribe = null;
-    runtime.social.room = null;
-    document.getElementById("socialStatusBar").classList.add("is-hidden");
-    updateCognixStatus("Social mode ended", "You have left the shared room.");
+  if (runtime.social.unsubscribe) runtime.social.unsubscribe();
+  runtime.social.unsubscribe = null;
+  runtime.social.room = null;
+  document.getElementById("socialStatusBar").classList.add("is-hidden");
+  updateCognixStatus("Social mode ended", "You have left the shared room.");
 }
 
 function handleSocialSync(data) {
-    // If the data came from us, don't overwrite local (to avoid cursor jump)
-    // But for others, update their fields.
-    // In this simple version, we'll try to map users to slots A, B, C, D
-    const userIds = Object.keys(data.arguments || []).sort();
-    
-    userIds.forEach((uid, index) => {
-        if (uid === runtime.social.userId) return; // Don't overwrite local typing
-        
-        const slotId = ["debateA", "debateB", "debateC", "debateD"][index];
-        const input = document.getElementById(slotId);
-        if (input) {
-            input.value = data.arguments[uid];
-        }
-    });
+  // If the data came from us, don't overwrite local (to avoid cursor jump)
+  // But for others, update their fields.
+  // In this simple version, we'll try to map users to slots A, B, C, D
+  const userIds = Object.keys(data.arguments || []).sort();
 
-    if (data.context && !document.getElementById("debateContext").value) {
-        document.getElementById("debateContext").value = data.context;
+  userIds.forEach((uid, index) => {
+    if (uid === runtime.social.userId) return; // Don't overwrite local typing
+
+    const slotId = ["debateA", "debateB", "debateC", "debateD"][index];
+    const input = document.getElementById(slotId);
+    if (input) {
+      input.value = data.arguments[uid];
     }
+  });
+
+  if (data.context && !document.getElementById("debateContext").value) {
+    document.getElementById("debateContext").value = data.context;
+  }
 }
 
 function syncViewpointCards() {
@@ -831,12 +986,12 @@ async function judgeDebate() {
 
   setButtonLoading(submitButton, true, "Judging...");
   hideVerdictPanel();
-  startThinkingSequence();
+  startDebateThinkingSequence();
 
   try {
     const result = await postJson("/api/debate", { dispute, opinions });
     renderDebateResult(result);
-    playAvatarPhase("thinking");
+    playAvatarPhase("idle");
     updateCognixStatus(
       "Debate verdict",
       "Cognix has compared the room, weighed the strongest case, and is now explaining why that side wins.",
@@ -844,7 +999,7 @@ async function judgeDebate() {
     await maybeSpeak(result.spokenResponse, "debate");
   } catch (error) {
     renderDebateError(error.message || "Cognix could not judge the debate.");
-    playAvatarPhase("thinking");
+    playAvatarPhase("idle");
     updateCognixStatus(
       "Connection issue",
       "Cognix could not complete the debate judgment. Check the server and API credentials, then try again.",
@@ -857,9 +1012,27 @@ async function judgeDebate() {
 function renderDebateResult(result) {
   const scorecards = Array.isArray(result.scorecards) ? result.scorecards : [];
   const winnerCard = scorecards.find((item) => item.id === result.winnerId) || scorecards[0];
+  const debateConsole = document.querySelector(".debate-console");
+  const shell = document.querySelector(".avatar-shell-page");
+  const modeConsole = document.querySelector(".mode-console");
+  const resetRow = document.getElementById("debateResetRow");
 
   runtime.lastDebateSpeech = result.spokenResponse || "";
   setSpeakButtonState("speakVerdict", Boolean(runtime.lastDebateSpeech));
+  hideDebateThinkingRail();
+  if (debateConsole) {
+    debateConsole.classList.remove("is-thinking");
+    debateConsole.classList.add("is-result");
+  }
+  if (shell) {
+    shell.classList.add("is-result-mode");
+  }
+  if (modeConsole) {
+    modeConsole.classList.add("is-debate-result");
+  }
+  if (resetRow) {
+    resetRow.classList.remove("is-hidden");
+  }
 
   updateVerdict(
     result.verdictTitle || "Debate verdict ready.",
@@ -869,11 +1042,30 @@ function renderDebateResult(result) {
     scorecards,
     result.winnerId || "",
   );
+  stopDebateThinkingSequence();
 }
 
 function renderDebateError(message) {
   runtime.lastDebateSpeech = "";
   setSpeakButtonState("speakVerdict", false);
+  stopDebateThinkingSequence();
+  hideDebateThinkingRail();
+  const debateConsole = document.querySelector(".debate-console");
+  const shell = document.querySelector(".avatar-shell-page");
+  const modeConsole = document.querySelector(".mode-console");
+  const resetRow = document.getElementById("debateResetRow");
+  if (debateConsole) {
+    debateConsole.classList.remove("is-thinking", "is-result");
+  }
+  if (shell) {
+    shell.classList.remove("is-result-mode");
+  }
+  if (modeConsole) {
+    modeConsole.classList.remove("is-debate-result");
+  }
+  if (resetRow) {
+    resetRow.classList.add("is-hidden");
+  }
   updateVerdict(
     "Debate verdict unavailable.",
     message,
@@ -899,12 +1091,38 @@ function goToDebateCountStep() {
   );
 }
 
-function resetDebateFlow() {
+function resetDebateFlow(settings = {}) {
   runtime.lastDebateSpeech = "";
   setSpeakButtonState("speakVerdict", false);
   setSelectedViewpointCount("3");
   showDebateStep("context", false);
   hideVerdictPanel();
+  hideDebateThinkingRail();
+  const debateConsole = document.querySelector(".debate-console");
+  const shell = document.querySelector(".avatar-shell-page");
+  const modeConsole = document.querySelector(".mode-console");
+  const resetRow = document.getElementById("debateResetRow");
+  if (debateConsole) {
+    debateConsole.classList.remove("is-thinking", "is-result");
+  }
+  if (shell) {
+    shell.classList.remove("is-result-mode");
+  }
+  if (modeConsole) {
+    modeConsole.classList.remove("is-debate-result");
+  }
+  if (resetRow) {
+    resetRow.classList.add("is-hidden");
+  }
+
+  if (!settings.preserveInputs) {
+    ["debateContext", "debateA", "debateB", "debateC", "debateD"].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.value = "";
+      }
+    });
+  }
 }
 
 function showDebateStep(step, animate = true) {
@@ -990,7 +1208,7 @@ function updateVerdict(title, reason, scores, moderatorSummary, scorecards, winn
     if (!window.gsap || !window.ScrambleTextPlugin || runtime.reduced) {
       explanation.textContent = reason;
     } else {
-      window.gsap.fromTo(explanation, 
+      window.gsap.fromTo(explanation,
         { autoAlpha: 0, y: 10 },
         { autoAlpha: 1, y: 0, duration: 1, delay: 0.2, ease: "power2.out" }
       );
@@ -1029,7 +1247,7 @@ function updateVerdict(title, reason, scores, moderatorSummary, scorecards, winn
         "-=0.8"
       );
     }
-    
+
     tl.add(() => {
       window.scrollTo({ top: panel.offsetTop - 50, behavior: 'smooth' });
     }, "-=1");
@@ -1127,22 +1345,194 @@ function setAvatarState(state) {
 }
 
 function startThinkingSequence() {
-  playAvatarPhase("intro");
-  setAvatarState("intro");
+  const problemConsole = document.querySelector(".problem-console");
+  const resultPanel = document.getElementById("problemResult");
+  const voiceDock = document.getElementById("voiceDock");
+  const resetRow = document.getElementById("problemResetRow");
+  const thinkingLoopCopy = document.getElementById("thinkingLoopCopy");
+  const shell = document.querySelector(".avatar-shell-page");
+  if (problemConsole) {
+    problemConsole.classList.remove("is-result");
+    problemConsole.classList.add("is-thinking");
+  }
+  if (resultPanel) resultPanel.classList.add("is-hidden");
+  if (voiceDock) voiceDock.classList.add("is-hidden");
+  if (resetRow) resetRow.classList.add("is-hidden");
+  if (thinkingLoopCopy) thinkingLoopCopy.classList.remove("is-hidden");
+  if (shell) shell.classList.remove("is-result-mode");
 
-  const currentToken = runtime.videoToken;
-  const video = document.getElementById("avatarPlayer");
-  if (!video) {
-    return;
+  playAvatarPhase("thinking"); // Start loop immediately
+  setAvatarState("thinking");
+  startThinkingCycle("thinkingLoopText", [
+    "Cognix is reviewing the dilemma...",
+    "Searching for the optimal path...",
+    "Synthesizing AI reasoning...",
+    "Finalizing decision flow...",
+  ]);
+}
+
+function resetProblemFlow(settings = {}) {
+  const problemConsole = document.querySelector(".problem-console");
+  const resultPanel = document.getElementById("problemResult");
+  const resetRow = document.getElementById("problemResetRow");
+  const thinkingLoopCopy = document.getElementById("thinkingLoopCopy");
+  const shell = document.querySelector(".avatar-shell-page");
+  const input = document.getElementById("problemInput");
+  const resultTitle = document.getElementById("decisionTitle");
+  const resultSummary = document.getElementById("decisionSummary");
+  const understanding = document.getElementById("problemUnderstanding");
+  const options = document.getElementById("problemOptions");
+  const keyTension = document.getElementById("problemKeyTension");
+  const evaluation = document.getElementById("problemEvaluation");
+  const decision = document.getElementById("problemDecision");
+  const decisionWhy = document.getElementById("problemDecisionWhy");
+  const nextStep = document.getElementById("problemNextStep");
+
+  stopThinkingCycle();
+  runtime.lastProblemSpeech = "";
+  setSpeakButtonState("speakDecision", false);
+
+  if (problemConsole) {
+    problemConsole.classList.remove("is-thinking", "is-result");
+  }
+  if (shell) {
+    shell.classList.remove("is-result-mode");
+  }
+  if (resultPanel) {
+    resultPanel.classList.add("is-hidden");
+  }
+  if (resetRow) {
+    resetRow.classList.add("is-hidden");
+  }
+  if (thinkingLoopCopy) {
+    thinkingLoopCopy.classList.add("is-hidden");
+  }
+  if (input) {
+    if (!settings.preserveInput) {
+      input.value = "";
+      input.focus();
+    }
+  }
+  if (resultTitle) resultTitle.textContent = "Waiting for a problem.";
+  if (resultSummary) resultSummary.textContent = "Submit a dilemma and Cognix will break it into an understanding layer, three options, an evaluation stage, and a final recommendation.";
+  if (understanding) understanding.textContent = "The decision context will appear here once the AI response arrives.";
+  if (options) options.innerHTML = "";
+  if (keyTension) keyTension.textContent = "Cognix will surface the core tension behind the decision here.";
+  if (evaluation) evaluation.innerHTML = "";
+  if (decision) decision.textContent = "No recommendation yet.";
+  if (decisionWhy) decisionWhy.textContent = "The final call will appear here with a practical explanation.";
+  if (nextStep) nextStep.textContent = "";
+
+  setAvatarState("idle");
+  playAvatarPhase("idle");
+}
+
+function startDebateThinkingSequence() {
+  const debateRail = document.getElementById("debateThinkingRail");
+  const debateConsole = document.querySelector(".debate-console");
+  const modeConsole = document.querySelector(".mode-console");
+  const resetRow = document.getElementById("debateResetRow");
+  if (debateRail) {
+    debateRail.classList.remove("is-hidden");
+  }
+  if (debateConsole) {
+    debateConsole.classList.remove("is-result");
+    debateConsole.classList.add("is-thinking");
+  }
+  if (modeConsole) {
+    modeConsole.classList.remove("is-debate-result");
+    modeConsole.classList.add("is-debate-thinking");
+  }
+  if (resetRow) {
+    resetRow.classList.add("is-hidden");
   }
 
-  video.onended = () => {
-    if (currentToken !== runtime.videoToken) {
+  playAvatarPhase("thinking");
+  setAvatarState("thinking");
+
+  updateDebateThinkingStatus("Cognix is reviewing the debate...");
+  startThinkingCycle("debateThinkingText", [
+    "Cognix is reviewing the debate...",
+    "Comparing the viewpoints...",
+    "Balancing evidence and fairness...",
+    "Finalizing the verdict...",
+  ]);
+}
+
+function stopDebateThinkingSequence() {
+  stopThinkingCycle();
+  hideDebateThinkingRail();
+  const debateConsole = document.querySelector(".debate-console");
+  const modeConsole = document.querySelector(".mode-console");
+  if (debateConsole) {
+    debateConsole.classList.remove("is-thinking");
+  }
+  if (modeConsole) {
+    modeConsole.classList.remove("is-debate-thinking");
+  }
+}
+
+function updateDebateThinkingStatus(text) {
+  const label = document.getElementById("debateThinkingText");
+  if (label) {
+    label.textContent = text;
+  }
+}
+
+function hideDebateThinkingRail() {
+  const debateRail = document.getElementById("debateThinkingRail");
+  if (debateRail) {
+    debateRail.classList.add("is-hidden");
+  }
+}
+
+function startThinkingCycle(targetId = "thinkingLoopText", phrases = [
+  "Cognix is reviewing the dilemma...",
+  "Searching for the optimal path...",
+  "Synthesizing AI reasoning...",
+  "Finalizing decision flow...",
+]) {
+  stopThinkingCycle();
+  let current = 1; // Start from second phrase to show rotation faster
+
+  const textEl = document.getElementById(targetId);
+  if (!textEl) return;
+
+  if (window.gsap) {
+    window.gsap.set(textEl, { autoAlpha: 1, y: 0 });
+  }
+
+  runtime.thinkingInterval = setInterval(() => {
+    if (!window.gsap) {
+      textEl.textContent = phrases[current];
+      current = (current + 1) % phrases.length;
       return;
     }
-    playAvatarPhase("thinking");
-    setAvatarState("thinking");
-  };
+
+    window.gsap.to(textEl, {
+      autoAlpha: 0,
+      y: -8,
+      duration: 0.35,
+      ease: "power2.in",
+      onComplete: () => {
+        textEl.textContent = phrases[current];
+        current = (current + 1) % phrases.length;
+        window.gsap.to(textEl, { 
+          autoAlpha: 1, 
+          y: 0, 
+          duration: 0.45,
+          ease: "power2.out" 
+        });
+      }
+    });
+  }, 2200);
+}
+
+function stopThinkingCycle() {
+  if (runtime.thinkingInterval) {
+    clearInterval(runtime.thinkingInterval);
+    runtime.thinkingInterval = null;
+  }
 }
 
 function playAvatarPhase(phase) {
@@ -1152,25 +1542,19 @@ function playAvatarPhase(phase) {
   }
 
   runtime.videoToken += 1;
-  const token = runtime.videoToken;
   const source = AVATAR_SOURCES[phase] || AVATAR_SOURCES.idle;
 
-  video.pause();
+  // Faster transition: just swap src and play
   video.onended = null;
   video.loop = phase !== "intro";
+  video.pause();
+  video.currentTime = 0;
   video.src = source;
   video.load();
 
-  const playVideo = () => {
-    if (token !== runtime.videoToken) {
-      return;
-    }
-    video.play().catch(() => {
-      return;
-    });
-  };
-
-  video.addEventListener("canplay", playVideo, { once: true });
+  video.play().catch(() => {
+    // Fallback if autoplay is blocked by browser
+  });
 }
 
 async function maybeSpeak(text, mode) {
@@ -1199,18 +1583,23 @@ async function playSpeech(text) {
   updateVoiceHint("Generating voice playback...");
 
   try {
+    const selectedVoiceId = runtime.voiceId || localStorage.getItem("cognix_voice_id") || "";
     const response = await fetch("/api/speak", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        voiceId: selectedVoiceId,
+      }),
     });
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({ error: "Voice request failed." }));
-      console.warn("ElevenLabs failed, falling back to browser speech:", payload.error);
-      return fallbackToBrowserSpeech(text);
+      console.warn("ElevenLabs failed:", payload.error);
+      updateVoiceHint("ElevenLabs voice playback failed: " + payload.error);
+      return;
     }
 
     const blob = await response.blob();
@@ -1226,42 +1615,9 @@ async function playSpeech(text) {
     });
     updateVoiceHint("Voice playback is ready (ElevenLabs).");
   } catch (error) {
-    console.warn("Speech error, trying browser fallback:", error);
-    fallbackToBrowserSpeech(text);
+    console.warn("Speech error:", error);
+    updateVoiceHint("ElevenLabs voice playback failed. Check the API key and selected voice.");
   }
-}
-
-function fallbackToBrowserSpeech(text) {
-  if (!window.speechSynthesis) {
-    updateVoiceHint("Speech synthesis not supported in this browser.");
-    return;
-  }
-
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  
-  // Try to find a nice English voice
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(v => v.name.includes("Google") && v.lang.startsWith("en")) || 
-                          voices.find(v => v.lang.startsWith("en"));
-  
-  if (preferredVoice) utterance.voice = preferredVoice;
-  utterance.rate = 0.95;
-  utterance.pitch = 1.1;
-
-  utterance.onstart = () => {
-    updateVoiceHint("Voice playback active (Browser Fallback).");
-    const voiceDock = document.getElementById("voiceDock");
-    voiceDock?.classList.remove("is-hidden");
-  };
-
-  utterance.onerror = (e) => {
-    updateVoiceHint("Browser speech failed: " + e.error);
-  };
-
-  window.speechSynthesis.speak(utterance);
 }
 
 function updateVoiceHint(text) {
@@ -1323,14 +1679,11 @@ function animateProblemResult() {
 
   const tl = window.gsap.timeline({
     onComplete: () => {
-      window.scrollTo({
-        top: panel.offsetTop + panel.offsetHeight - window.innerHeight + 100,
-        behavior: 'smooth'
-      });
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
 
-  tl.fromTo(panel, 
+  tl.fromTo(panel,
     { autoAlpha: 0, y: 100, scale: 0.95 },
     { autoAlpha: 1, y: 0, scale: 1, duration: 1.2, ease: "expo.out" }
   );

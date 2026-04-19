@@ -90,13 +90,15 @@ app.post("/api/speak", async (request, response) => {
     ensureElevenLabsConfigured();
 
     const text = String(request.body?.text || "").trim();
+    const requestedVoiceId = String(request.body?.voiceId || "").trim();
     if (!text) {
       return response.status(400).json({ error: "Text is required for speech." });
     }
 
+    const voiceId = requestedVoiceId || elevenLabsVoiceId;
     const elevenResponse = await fetch(
       "https://api.elevenlabs.io/v1/text-to-speech/" +
-        encodeURIComponent(elevenLabsVoiceId) +
+        encodeURIComponent(voiceId) +
         "?output_format=mp3_44100_128",
       {
         method: "POST",
@@ -127,6 +129,41 @@ app.post("/api/speak", async (request, response) => {
     response.setHeader("Content-Type", "audio/mpeg");
     response.setHeader("Cache-Control", "no-store");
     response.send(audioBuffer);
+  } catch (error) {
+    handleApiError(response, error);
+  }
+});
+
+app.get("/api/voices", async (_request, response) => {
+  try {
+    ensureElevenLabsConfigured();
+
+    const elevenResponse = await fetch("https://api.elevenlabs.io/v1/voices", {
+      headers: {
+        "xi-api-key": elevenLabsApiKey,
+      },
+    });
+
+    const payload = await elevenResponse.json().catch(() => null);
+
+    if (!elevenResponse.ok) {
+      const errorText = payload?.detail || payload?.error || "Unable to load ElevenLabs voices.";
+      throw createHttpError(elevenResponse.status, trimError(errorText));
+    }
+
+    const voices = Array.isArray(payload?.voices)
+      ? payload.voices.map((voice) => ({
+          voice_id: String(voice?.voice_id || ""),
+          name: String(voice?.name || "Unnamed voice"),
+          category: String(voice?.category || ""),
+          preview_url: String(voice?.preview_url || ""),
+        })).filter((voice) => voice.voice_id)
+      : [];
+
+    response.json({
+      voices,
+      defaultVoiceId: elevenLabsVoiceId,
+    });
   } catch (error) {
     handleApiError(response, error);
   }

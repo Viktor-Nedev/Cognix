@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cognix | Cognix Test</title>
+    <link rel="icon" type="image/png" href="./images/tablogocognix.png" />
     <meta
       name="description"
       content="Test the Cognix Cognix and submit a problem to trigger the visible thinking state."
@@ -19,6 +20,7 @@
     <script defer src="./gsap-public/gsap-public/umd/SplitText.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/ScrambleTextPlugin.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./transition.js"></script>
     <script type="module" src="./auth.js"></script>
     <script defer src="./app.js"></script>
     <script type="module" src="./social.js"></script>
@@ -41,20 +43,24 @@
     <main class="site-shell avatar-shell-page">
       <header class="site-header compact">
         <a class="brand" href="./index.html" data-transition-link>
-          <span class="brand-mark">C</span>
+          <img class="brand-logo" src="./images/Cognix_logo.png" alt="Cognix" />
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
 
-        <nav class="top-nav header-actions" style="margin-right: 1rem;">
-          <a href="./profile.html" class="auth-protected" style="display: none;">Profile</a>
-          <a href="./settings.html" class="auth-protected" style="display: none;">Settings</a>
+        <nav class="top-nav header-actions">
+          <a href="./profile.html" data-transition-link class="auth-protected" style="display: none;">Profile</a>
+          <a href="./settings.html" data-transition-link class="auth-protected" style="display: none;">Settings</a>
         </nav>
       </header>
 
       <section class="avatar-playground">
         <div class="avatar-intro reveal" data-reveal="fade-up">
           <p class="eyebrow">Cognix test environment</p>
-          <h1 class="hero-title avatar-page-title">Put the problem in front of Cognix.</h1>
+          <h1 class="hero-title avatar-page-title">
+            <span class="avatar-title-line">Put the problem</span>
+            <span class="avatar-title-line">in front of</span>
+            <span class="avatar-title-line">Cognix.</span>
+          </h1>
           <p class="hero-lead narrow">
             The Cognix starts in its normal state, plays the activation clip,
             then stays in the thinking loop while the system focuses on the dilemma.
@@ -118,13 +124,23 @@
                   <div class="console-status-actions">
                     <label class="voice-switch" for="voiceEnabled">
                       <input type="checkbox" id="voiceEnabled" />
-                      <span>Cognix voice</span>
+                      <span>ElevenLabs voice</span>
                     </label>
                     <p class="voice-hint" id="voiceHint">
                       Enable ElevenLabs voice playback for Cognix responses.
                     </p>
                   </div>
+
+                  <div class="debate-intake-actions">
+                    <button type="button" class="button button-primary" id="openOnlineDebate">
+                      Online debate
+                    </button>
+                  </div>
                 </div>
+              </div>
+
+              <div class="thinking-loop-copy is-hidden" id="thinkingLoopCopy" aria-live="polite">
+                <h3 id="thinkingLoopText">Cognix is reviewing the dilemma...</h3>
               </div>
 
               <div class="mode-panels">
@@ -205,21 +221,37 @@
                       </div>
                     </div>
                   </article>
+
+                  <div class="problem-reset-row is-hidden" id="problemResetRow">
+                    <button type="button" class="button button-primary" id="resetProblemFlow">
+                      Ask another problem
+                    </button>
+                  </div>
                 </section>
 
                 <section class="debate-console mode-panel" data-mode-panel="debate">
                   <div class="debate-console-head">
                     <div>
                       <span class="tile-label">Debate mode</span>
-                      <h3>Let Cognix moderate the room, compare the arguments, and decide which side is strongest.</h3>
+                      <h3>Cognix moderates the room, compares the arguments, and picks the strongest side.</h3>
                     </div>
-                    <div class="social-actions">
-                      <button type="button" class="button button-secondary" id="socialOpenCreate">
-                        Create Social Room
-                      </button>
-                      <button type="button" class="button button-secondary" id="socialOpenJoin">
-                        Join Room
-                      </button>
+                    <div class="debate-head-aside">
+                      <div class="social-actions">
+                        <button type="button" class="button button-secondary" id="backToDebateIntake">
+                          Back
+                        </button>
+                        <button type="button" class="button button-secondary" id="socialOpenCreate">
+                          Create Social Room
+                        </button>
+                        <button type="button" class="button button-secondary" id="socialOpenJoin">
+                          Join Room
+                        </button>
+                      </div>
+
+                      <div class="debate-thinking-rail is-hidden" id="debateThinkingRail" aria-live="polite">
+                        <span class="tile-label">Thinking loop</span>
+                        <h4 id="debateThinkingText">Cognix is reviewing the debate...</h4>
+                      </div>
                     </div>
                   </div>
 
@@ -349,6 +381,12 @@
                     </div>
                     <div class="debate-scoreboard" id="debateScoreboard"></div>
                   </article>
+
+                  <div class="debate-reset-row is-hidden" id="debateResetRow">
+                    <button type="button" class="button button-primary" id="debateResetFlow">
+                      New debate
+                    </button>
+                  </div>
                 </section>
               </div>
 

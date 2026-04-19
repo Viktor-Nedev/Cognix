@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot, addDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // Re-use config from social.js, or better, we can import it if social.js exports it.
 // Since we want this accessible globally, let's redefine config quickly or rely on window.firebaseConfig...
@@ -41,7 +41,7 @@ window.CognixAuth = {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       const userData = {
         uid: user.uid,
         email: email,
@@ -52,11 +52,17 @@ window.CognixAuth = {
         friends: [],
         createdAt: new Date().toISOString()
       };
-      
-      // Prevent hanging if DB is missing
-      await withTimeout(setDoc(doc(db, "users", user.uid), userData), 5000, "setDoc");
-      
+
+      // Firestore is best-effort so registration still completes if the DB is unavailable.
+      try {
+        await withTimeout(setDoc(doc(db, "users", user.uid), userData), 5000, "setDoc");
+      } catch (error) {
+        console.warn("Firestore profile write failed during signup, continuing with local fallback:", error);
+        saveLocalProfile(user.uid, userData);
+      }
+
       localStorage.setItem("cognix_voice", "true");
+      window.CognixAuth.userData = userData;
       return user;
     } catch (error) {
       console.error(error);
@@ -84,7 +90,9 @@ window.CognixAuth = {
       const userRef = doc(db, "users", uid);
       const snap = await withTimeout(getDoc(userRef), 4000, "getDoc");
       
-      if (!snap.exists()) return null;
+      if (!snap.exists()) {
+        return loadLocalProfile(uid);
+      }
       
       const data = snap.data();
       const lastResetDate = new Date(data.lastReset);
@@ -98,10 +106,11 @@ window.CognixAuth = {
         data.casesLeft = 10;
         data.lastReset = now.toISOString();
       }
+      saveLocalProfile(uid, data);
       return data;
     } catch (e) {
       console.warn("Skipping DB check due to error:", e.message);
-      return { username: "Local User", casesLeft: 10 }; // Fallback to avoid breaking
+      return loadLocalProfile(uid) || { username: "Local User", casesLeft: 10 }; // Fallback to avoid breaking
     }
   },
 
@@ -167,6 +176,57 @@ window.CognixAuth = {
          });
       } catch(e) {}
   },
+
+  saveProblemHistory: async (entry) => {
+      const uid = window.CognixAuth.currentUser?.uid;
+      if (!uid || !entry) return null;
+
+      const record = {
+        ...entry,
+        id: entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: entry.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+
+      try {
+        await setDoc(doc(db, "users", uid, "problemHistory", record.id), record);
+      } catch (error) {
+        console.warn("Could not save Cognix problem history to Firestore:", error);
+      }
+
+      try {
+        const storageKey = `cognix_problem_history_${uid}`;
+        const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        const next = [record, ...existing.filter((item) => item.id !== record.id)].slice(0, 20);
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (error) {
+        console.warn("Could not save Cognix problem history to localStorage:", error);
+      }
+
+      return record;
+  },
+
+  getProblemHistory: async () => {
+      const uid = window.CognixAuth.currentUser?.uid;
+      if (!uid) return [];
+
+      try {
+        const historyRef = collection(db, "users", uid, "problemHistory");
+        const snap = await getDocs(query(historyRef, orderBy("createdAt", "desc"), limit(20)));
+        const items = [];
+        snap.forEach((item) => items.push(item.data()));
+        return items;
+      } catch (error) {
+        console.warn("Falling back to local problem history:", error);
+      }
+
+      try {
+        const storageKey = `cognix_problem_history_${uid}`;
+        return JSON.parse(localStorage.getItem(storageKey) || "[]");
+      } catch (error) {
+        return [];
+      }
+  },
   
   clearInvite: async (inviteObj) => {
       try {
@@ -176,6 +236,36 @@ window.CognixAuth = {
       } catch(e) {}
   }
 };
+
+function loadLocalProfile(uid) {
+  try {
+    const raw = localStorage.getItem(`cognix_profile_${uid}`);
+    if (!raw) {
+      return null;
+    }
+
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") {
+      return null;
+    }
+
+    return {
+      ...data,
+      casesLeft: data.casesLeft ?? 10,
+      lastReset: data.lastReset || new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveLocalProfile(uid, data) {
+  try {
+    localStorage.setItem(`cognix_profile_${uid}`, JSON.stringify(data));
+  } catch {
+    // Ignore localStorage quota or privacy failures.
+  }
+}
 
 onAuthStateChanged(auth, async (user) => {
   window.CognixAuth.currentUser = user;

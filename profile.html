@@ -4,15 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cognix | Profile</title>
+    <link rel="icon" type="image/png" href="./images/tablogocognix.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="./gsap-public/gsap-public/umd/gsap.js"></script>
     <script defer src="./gsap-public/gsap-public/umd/CustomEase.js"></script>
+    <script defer src="./transition.js"></script>
     <script type="module" src="./auth.js"></script>
     <style>
-      .profile-shell { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+      .profile-shell { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
       .header-actions { display: flex; gap: 1rem; align-items: center; }
       
       .profile-card {
@@ -35,6 +37,43 @@
       .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-3)); width: 100%; transform-origin: left; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
       
       .timer-box { margin-top: 1.5rem; font-family: monospace; font-size: 1.1rem; color: var(--accent-2); background: rgba(255, 208, 116, 0.1); display: inline-block; padding: 0.5rem 1rem; border-radius: 12px; }
+
+      /* Problem History */
+      .history-section { margin-top: 2rem; }
+      .history-section h3 { font-family: "Sora"; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
+      .history-section-head { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+      .history-count { color: var(--muted); font-size: 0.9rem; }
+      .history-layout { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 1.25rem; }
+      .history-list { display: grid; gap: 0.9rem; align-content: start; }
+      .history-item {
+        width: 100%; text-align: left; background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07); color: var(--text);
+        border-radius: 18px; padding: 1rem; cursor: pointer;
+        transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+      }
+      .history-item:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); }
+      .history-item.is-active { border-color: var(--accent); background: rgba(255, 208, 116, 0.08); }
+      .history-item-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.45rem; }
+      .history-item-meta { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.65rem; }
+      .history-item-summary { color: rgba(234, 241, 245, 0.82); font-size: 0.92rem; line-height: 1.55; }
+      .history-detail {
+        min-height: 100%; background: linear-gradient(180deg, rgba(7,18,23,0.82), rgba(255,255,255,0.03));
+        border: 1px solid rgba(255,255,255,0.07); border-radius: 24px; padding: 1.4rem;
+      }
+      .history-detail .tile-label { margin-bottom: 0.75rem; display: inline-block; }
+      .history-detail h4 { margin: 0 0 0.75rem; font-size: 1.6rem; }
+      .history-detail p { margin-top: 0; color: rgba(234, 241, 245, 0.88); line-height: 1.65; }
+      .history-detail-section { margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+      .history-detail-section h5 { margin: 0 0 0.55rem; font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+      .history-options { display: grid; gap: 0.9rem; margin-top: 0.75rem; }
+      .history-option-card {
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 16px; padding: 1rem;
+      }
+      .history-option-card h6 { margin: 0 0 0.5rem; font-size: 1rem; }
+      .history-option-card p { margin-bottom: 0.75rem; }
+      .history-option-meta { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; color: var(--muted); font-size: 0.84rem; }
+      .history-list-empty { color: var(--muted); font-size: 0.92rem; padding: 1rem 0; }
       
       /* Friends Section */
       .friends-section { margin-top: 2rem; }
@@ -52,17 +91,23 @@
     </style>
   </head>
   <body class="theme-home">
+    <div class="transition-overlay" aria-hidden="true">
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+      <div class="transition-panel"></div>
+    </div>
+
     <div class="backdrop" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-c"></div><div class="noise"></div></div>
     
     <main class="profile-shell">
       <header class="site-header compact">
-        <a class="brand" href="./index.html">
-          <span class="brand-mark">C</span>
+        <a class="brand" href="./index.html" data-transition-link>
+          <img class="brand-logo" src="./images/Cognix_logo.png" alt="Cognix" />
           <span class="brand-word">Cogni<span>x</span></span>
         </a>
         <nav class="top-nav header-actions">
-          <a href="./cognix.html">Cognix</a>
-          <a href="./settings.html">Settings</a>
+          <a href="./cognix.html" data-transition-link>Cognix</a>
+          <a href="./settings.html" data-transition-link>Settings</a>
           <button id="logoutBtn" class="button button-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Log Out</button>
         </nav>
       </header>
@@ -84,6 +129,50 @@
             <div class="progress-bar" id="casesProgressBar" style="transform: scaleX(1)"></div>
           </div>
           <div class="timer-box" id="resetTimer">Next reset in: --:--:--</div>
+        </div>
+
+        <div class="history-section">
+          <div class="history-section-head">
+            <h3>Problem History</h3>
+            <span class="history-count" id="problemHistoryCount">0 saved problems</span>
+          </div>
+          <div class="history-layout">
+            <div class="history-list" id="problemHistoryList">
+              <p class="history-list-empty">Your solved dilemmas will appear here. Click one to reopen the full reasoning and solution set.</p>
+            </div>
+            <article class="history-detail" id="problemHistoryDetail">
+              <span class="tile-label">Selected case</span>
+              <h4 id="historyDetailTitle">No problem selected yet</h4>
+              <p id="historyDetailSummary">Choose a problem from the history list to see the full decision breakdown.</p>
+
+              <div class="history-detail-section">
+                <h5>Problem</h5>
+                <p id="historyDetailProblem"></p>
+              </div>
+
+              <div class="history-detail-section">
+                <h5>Understanding</h5>
+                <p id="historyDetailUnderstanding"></p>
+              </div>
+
+              <div class="history-detail-section">
+                <h5>Possible solutions</h5>
+                <div class="history-options" id="historyDetailOptions"></div>
+              </div>
+
+              <div class="history-detail-section">
+                <h5>Evaluation</h5>
+                <p id="historyDetailEvaluation"></p>
+              </div>
+
+              <div class="history-detail-section">
+                <h5>Final decision</h5>
+                <p id="historyDetailDecision"></p>
+                <p id="historyDetailDecisionWhy"></p>
+                <p id="historyDetailNextStep"></p>
+              </div>
+            </article>
+          </div>
         </div>
         
         <div class="friends-section">
@@ -136,8 +225,159 @@
            }, 1000);
        }
 
+       function escapeHtml(value) {
+           return String(value ?? "")
+               .replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&#39;");
+       }
+
+       function formatHistoryDate(value) {
+           const date = typeof value === "number" ? new Date(value) : new Date(value || Date.now());
+           return date.toLocaleString([], {
+               month: "short",
+               day: "numeric",
+               hour: "2-digit",
+               minute: "2-digit"
+           });
+       }
+
+       function renderHistoryOptions(options) {
+           if (!Array.isArray(options) || options.length === 0) {
+               return "<p style='color: var(--muted);'>No structured solutions were saved for this entry.</p>";
+           }
+
+           return options.map((option, index) => {
+               const pros = Array.isArray(option.pros) ? option.pros : [];
+               const cons = Array.isArray(option.cons) ? option.cons : [];
+               return `
+                   <article class="history-option-card">
+                       <h6>Option ${String.fromCharCode(65 + index)}: ${escapeHtml(option.title || "Untitled option")}</h6>
+                       <p>${escapeHtml(option.summary || "")}</p>
+                       <div class="history-option-meta">
+                           <span><strong>Risk:</strong> ${escapeHtml(option.risk || "n/a")}</span>
+                           <span><strong>Confidence:</strong> ${escapeHtml(String(option.confidence ?? "n/a"))}%</span>
+                       </div>
+                       <div class="history-option-meta" style="margin-top: 0.75rem;">
+                           <span><strong>Pros:</strong> ${escapeHtml(pros.join(" • ") || "None")}</span>
+                           <span><strong>Cons:</strong> ${escapeHtml(cons.join(" • ") || "None")}</span>
+                       </div>
+                   </article>
+               `;
+           }).join("");
+       }
+
+       function showHistoryDetail(entry) {
+           const detailTitle = document.getElementById("historyDetailTitle");
+           const detailSummary = document.getElementById("historyDetailSummary");
+           const detailProblem = document.getElementById("historyDetailProblem");
+           const detailUnderstanding = document.getElementById("historyDetailUnderstanding");
+           const detailOptions = document.getElementById("historyDetailOptions");
+           const detailEvaluation = document.getElementById("historyDetailEvaluation");
+           const detailDecision = document.getElementById("historyDetailDecision");
+           const detailDecisionWhy = document.getElementById("historyDetailDecisionWhy");
+           const detailNextStep = document.getElementById("historyDetailNextStep");
+
+           if (!entry) {
+               if (detailTitle) detailTitle.textContent = "No problem selected yet";
+               if (detailSummary) detailSummary.textContent = "Choose a problem from the history list to see the full decision breakdown.";
+               if (detailProblem) detailProblem.textContent = "";
+               if (detailUnderstanding) detailUnderstanding.textContent = "";
+               if (detailOptions) detailOptions.innerHTML = "<p style='color: var(--muted);'>Possible solutions will appear here once you pick a saved problem.</p>";
+               if (detailEvaluation) detailEvaluation.textContent = "";
+               if (detailDecision) detailDecision.textContent = "";
+               if (detailDecisionWhy) detailDecisionWhy.textContent = "";
+               if (detailNextStep) detailNextStep.textContent = "";
+               return;
+           }
+
+           if (detailTitle) detailTitle.textContent = entry.title || "Untitled decision";
+           if (detailSummary) detailSummary.textContent = entry.summary || "";
+           if (detailProblem) detailProblem.textContent = entry.problem || "";
+           if (detailUnderstanding) detailUnderstanding.textContent = entry.understanding || "";
+           if (detailOptions) detailOptions.innerHTML = renderHistoryOptions(entry.options || []);
+           if (detailEvaluation) {
+               const evalParts = [];
+               if (entry.evaluation?.keyTension) {
+                   evalParts.push(entry.evaluation.keyTension);
+               }
+               if (Array.isArray(entry.evaluation?.tradeoffs) && entry.evaluation.tradeoffs.length) {
+                   evalParts.push(entry.evaluation.tradeoffs.join(" "));
+               }
+               detailEvaluation.textContent = evalParts.join(" ") || "No evaluation notes were saved.";
+           }
+           if (detailDecision) {
+               detailDecision.textContent = entry.decision?.recommendedOption ? `Recommended: ${entry.decision.recommendedOption}` : "No decision stored.";
+           }
+           if (detailDecisionWhy) {
+               detailDecisionWhy.textContent = entry.decision?.rationale || "";
+           }
+           if (detailNextStep) {
+               detailNextStep.textContent = entry.decision?.nextStep ? `Next step: ${entry.decision.nextStep}` : "";
+           }
+       }
+
+       function renderProblemHistory(entries) {
+           const list = document.getElementById("problemHistoryList");
+           const count = document.getElementById("problemHistoryCount");
+
+           if (!list || !count) return;
+
+           count.textContent = `${entries.length} saved problem${entries.length === 1 ? "" : "s"}`;
+           list.innerHTML = "";
+
+           if (!entries.length) {
+               list.innerHTML = "<p class='history-list-empty'>Your saved Cognix problems will appear here after you get a decision.</p>";
+               showHistoryDetail(null);
+               return;
+           }
+
+           entries.forEach((entry, index) => {
+               const button = document.createElement("button");
+               button.type = "button";
+               button.className = "history-item" + (index === 0 ? " is-active" : "");
+               button.dataset.historyId = entry.id || String(index);
+               button.innerHTML = `
+                   <div class="history-item-title">${escapeHtml(entry.title || "Untitled decision")}</div>
+                   <div class="history-item-meta">
+                       <span>${escapeHtml(formatHistoryDate(entry.createdAt))}</span>
+                       <span>${escapeHtml((entry.options || []).length)} options</span>
+                   </div>
+                   <div class="history-item-summary">${escapeHtml(entry.summary || entry.problem || "")}</div>
+               `;
+               button.addEventListener("click", () => {
+                   document.querySelectorAll(".history-item").forEach((item) => item.classList.remove("is-active"));
+                   button.classList.add("is-active");
+                   showHistoryDetail(entry);
+               });
+               list.appendChild(button);
+           });
+
+           showHistoryDetail(entries[0]);
+       }
+
+       async function loadProblemHistory() {
+           const list = document.getElementById("problemHistoryList");
+           if (list) {
+               list.innerHTML = "<p class='history-list-empty'>Loading saved problems...</p>";
+           }
+
+           try {
+               const entries = await window.CognixAuth.getProblemHistory();
+               renderProblemHistory(entries || []);
+           } catch (error) {
+               console.warn(error);
+               if (list) {
+                   list.innerHTML = "<p class='history-list-empty'>Could not load saved problems right now.</p>";
+               }
+           }
+       }
+
        document.addEventListener('cognix_auth_ready', (e) => {
-          const { user, userData } = e.detail;
+          const { user } = e.detail;
+          let { userData } = e.detail;
           if (!user) {
              window.location.href = "./auth.html";
              return;
@@ -167,6 +407,7 @@
           }
 
           loadMyFriends();
+          loadProblemHistory();
        });
 
        async function loadMyFriends() {
