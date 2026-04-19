@@ -169,19 +169,21 @@ app.get("/api/voices", async (_request, response) => {
   }
 });
 
-app.use(express.static(__dirname));
+if (process.env.NODE_ENV !== "production") {
+  app.use(express.static(__dirname));
 
-app.get("*", (request, response, next) => {
-  if (request.path.startsWith("/api/")) {
-    return next();
-  }
+  app.get("*", (request, response, next) => {
+    if (request.path.startsWith("/api/")) {
+      return next();
+    }
 
-  if (request.path === "/cognix" || request.path === "/cognix/") {
-    return response.sendFile(path.join(__dirname, "cognix.html"));
-  }
+    if (request.path === "/cognix" || request.path === "/cognix/") {
+      return response.sendFile(path.join(__dirname, "cognix.html"));
+    }
 
-  response.sendFile(path.join(__dirname, "index.html"));
-});
+    response.sendFile(path.join(__dirname, "index.html"));
+  });
+}
 
 if (process.env.NODE_ENV !== "production") {
   app.listen(port, () => {

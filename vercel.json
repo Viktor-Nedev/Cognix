@@ -1,19 +1,15 @@
 {
   "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server.js"
+      "destination": "/api/index.js"
     },
     {
       "source": "/cognix",
       "destination": "/cognix.html"
-    }
-  ],
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
     }
   ]
 }
